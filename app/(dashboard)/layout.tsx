@@ -31,7 +31,7 @@ export default async function DashboardLayout({
             </div>
             <ThemeToggle />
           </header>
-          <main className="flex-1 overflow-y-auto p-8">{children}</main>
+          <main className="animate-fadeIn flex-1 overflow-y-auto p-8">{children}</main>
         </div>
       </div>
     </Providers>

@@ -200,30 +200,30 @@ export default function DashboardPage() {
       {stats && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
+            <div className="animate-slideUp delay-1"><KpiCard
               label="Total Vehicles"
               value={stats.vehicles.total}
               sub={`${stats.vehicles.available} Available, ${stats.vehicles.onTrip} On Trip`}
               href="/fleet"
-            />
-            <KpiCard
+            /></div>
+            <div className="animate-slideUp delay-2"><KpiCard
               label="Active Drivers"
               value={stats.drivers.total}
               sub={`${stats.drivers.available} Available, ${stats.drivers.onTrip} On Trip`}
               href="/drivers"
-            />
-            <KpiCard
+            /></div>
+            <div className="animate-slideUp delay-3"><KpiCard
               label="Trips (Total)"
               value={stats.trips.total}
               sub={`${stats.trips.dispatched} Dispatched, ${stats.trips.completed} Completed`}
               href="/trips"
-            />
-            <KpiCard
+            /></div>
+            <div className="animate-slideUp delay-4"><KpiCard
               label="Fleet Utilization"
               value={`${stats.fleetUtilization}%`}
               sub={`${stats.vehicles.onTrip} of ${stats.vehicles.total - stats.vehicles.retired} active`}
               href="/maintenance"
-            />
+            /></div>
           </div>
 
           <Card>

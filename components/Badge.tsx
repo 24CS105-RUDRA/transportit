@@ -24,9 +24,10 @@ const STATUS_COLOR: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   const color = STATUS_COLOR[status] ?? "gray";
   const classes = COLOR_MAP[color];
+  const isActive = status === "ON_TRIP" || status === "DISPATCHED";
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${classes}`}
+      className={`hover-pop inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-transform ${classes} ${isActive ? "animate-pulseGlow" : ""}`}
     >
       {status.replaceAll("_", " ")}
     </span>

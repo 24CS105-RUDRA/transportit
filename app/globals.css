@@ -30,7 +30,177 @@ body {
   color: var(--foreground);
 }
 
-/* Global dark-mode overrides (beat Tailwind utilities via specificity) */
+/* ═══════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+/* Page fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Staggered card entrance */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+
+/* Scale-in for modals */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Toast slide-in from right */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Pulse glow for active badges */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+}
+.animate-pulseGlow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, #e4e4e7 25%, #d4d4d8 50%, #e4e4e7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Map marker bounce */
+@keyframes markerBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-markerBounce {
+  animation: markerBounce 0.6s ease-in-out;
+}
+
+/* Progress bar fill */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+.animate-fillBar {
+  animation: fillBar 0.8s ease-out forwards;
+}
+
+/* KPI number count-up feel */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-countUp {
+  animation: countUp 0.4s ease-out forwards;
+}
+
+/* Table row highlight on hover */
+@keyframes rowHighlight {
+  from { background-color: transparent; }
+  to { background-color: rgba(24, 24, 27, 0.02); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   HOVER EFFECTS
+   ═══════════════════════════════════════════════════════ */
+
+/* Card hover lift */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Button press effect */
+.hover-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.hover-press:active {
+  transform: scale(0.97);
+}
+
+/* Sidebar link hover */
+.hover-slide {
+  transition: all 0.15s ease;
+}
+.hover-slide:hover {
+  transform: translateX(4px);
+}
+
+/* Glow on focus */
+.focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Badge pop */
+.hover-pop {
+  transition: transform 0.15s ease;
+}
+.hover-pop:hover {
+  transform: scale(1.05);
+}
+
+/* Smooth underline */
+.hover-underline {
+  position: relative;
+}
+.hover-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #3b82f6;
+  transition: width 0.2s ease;
+}
+.hover-underline:hover::after {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GLOBAL DARK MODE OVERRIDES
+   ═══════════════════════════════════════════════════════ */
 .dark .bg-white { background-color: #18181b; }
 .dark .bg-zinc-50 { background-color: #0b0f17; }
 .dark .bg-zinc-100 { background-color: #27272a; }
@@ -44,9 +214,17 @@ body {
 .dark .text-zinc-400 { color: #a1a1aa; }
 .dark .hover\:bg-zinc-50:hover { background-color: #1f2937; }
 .dark .hover\:bg-zinc-100:hover { background-color: #27272a; }
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background-size: 200% 100%;
+}
 
+/* ═══════════════════════════════════════════════════════
+   PRINT
+   ═══════════════════════════════════════════════════════ */
 @media print {
   aside, header, nav, button, .no-print { display: none !important; }
   main { padding: 0 !important; }
   body { background: #fff !important; }
+  * { animation: none !important; transition: none !important; }
 }

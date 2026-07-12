@@ -6,7 +6,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${className}`}>
+    <div className={`hover-lift rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -26,13 +26,13 @@ export function KpiCard({
   const content = (
     <>
       <p className="text-sm font-medium text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-zinc-900">{value}</p>
+      <p className="animate-countUp mt-1 text-2xl font-semibold text-zinc-900">{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-500">{sub}</p>}
     </>
   );
   if (href) {
     return (
-      <a href={href} className="block cursor-pointer transition-opacity hover:opacity-80">
+      <a href={href} className="hover-lift block cursor-pointer transition-opacity hover:opacity-80">
         <Card>{content}</Card>
       </a>
     );

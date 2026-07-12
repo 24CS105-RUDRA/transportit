@@ -29,7 +29,7 @@ export function Thead({
             <th
               key={c}
               onClick={sortable ? () => sort.onSort(key) : undefined}
-              className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 ${
+              className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 transition-colors ${
                 sortable ? "cursor-pointer select-none hover:text-zinc-900" : ""
               }`}
             >
@@ -57,7 +57,7 @@ export function LoadingRow({ colSpan }: { colSpan: number }) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-zinc-500">
-        Loading…
+        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
       </td>
     </tr>
   );

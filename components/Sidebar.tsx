@@ -80,9 +80,9 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium ${
+              className={`hover-slide flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium ${
                 active
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-zinc-900 text-white shadow-md"
                   : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
               }`}
             >

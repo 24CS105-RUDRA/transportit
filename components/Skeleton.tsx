@@ -1,10 +1,10 @@
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-zinc-200 ${className}`} />;
+  return <div className={`animate-shimmer rounded bg-zinc-200 ${className}`} />;
 }
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+    <div className="animate-slideUp rounded-2xl border border-zinc-200 bg-white p-5">
       <Skeleton className="mb-3 h-3 w-24" />
       <Skeleton className="h-8 w-32" />
     </div>
