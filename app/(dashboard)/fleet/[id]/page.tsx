@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/Badge";
 import { formatCurrency } from "@/lib/format";
 import { TableSkeleton } from "@/components/Skeleton";
+import { VehicleTrackMap } from "@/components/MapView";
 
 type Vehicle = {
   id: string;
@@ -117,6 +118,10 @@ function DetailPage() {
         </div>
         <StatusBadge status={v.status} />
       </div>
+
+      {v.status !== "RETIRED" && (
+        <VehicleTrackMap vehicleId={v.id} refreshInterval={5000} />
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

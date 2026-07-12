@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/Badge";
 import { formatCurrency } from "@/lib/format";
 import { Modal } from "@/components/Modal";
 import { FormField, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "@/components/FormField";
+import { FleetMap } from "@/components/MapView";
 
 type Vehicle = {
   id: string;
@@ -47,6 +48,7 @@ export default function FleetPage() {
   const [sortKey, setSortKey] = useState<string>("registrationNumber");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
+  const [showMap, setShowMap] = useState(true);
   const pageSize = 8;
 
   const params = useMemo(() => {
@@ -175,6 +177,17 @@ export default function FleetPage() {
           + Add Vehicle
         </button>
       </div>
+
+      <div className="mb-4">
+        <button
+          onClick={() => setShowMap((s) => !s)}
+          className="text-sm font-medium text-blue-600 hover:underline"
+        >
+          {showMap ? "Hide Map" : "Show Live Map"}
+        </button>
+      </div>
+
+      {showMap && <FleetMap refreshInterval={5000} />}
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
