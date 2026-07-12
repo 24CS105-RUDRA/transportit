@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/Badge";
 import { Toast } from "@/components/Toast";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/lib/useToast";
+import { formatCurrency } from "@/lib/format";
 
 type Vehicle = { id: string; registrationNumber: string; nameModel: string; status: string };
 type Driver = { id: string; name: string; licenseExpiryDate: string; status: string };
@@ -24,6 +25,47 @@ type Trip = {
   vehicle?: Vehicle | null;
   driver?: Driver | null;
 };
+
+function TripTimeline({ status }: { status: string }) {
+  const steps = [
+    { key: "DRAFT", label: "Created" },
+    { key: "DISPATCHED", label: "Dispatched" },
+    { key: "COMPLETED", label: "Completed" },
+  ];
+  const cancelled = status === "CANCELLED";
+  const currentIdx = steps.findIndex((s) => s.key === status);
+
+  return (
+    <div className="flex items-center gap-1">
+      {steps.map((step, i) => {
+        const isActive = cancelled ? false : i <= currentIdx;
+        const isCurrent = step.key === status;
+        return (
+          <div key={step.key} className="flex items-center">
+            <div className={`flex items-center gap-1.5 ${i > 0 ? "ml-1" : ""}`}>
+              <div className={`h-2.5 w-2.5 rounded-full ${
+                isCurrent ? "bg-blue-600 ring-2 ring-blue-200" :
+                isActive ? "bg-emerald-500" : "bg-zinc-300"
+              }`} />
+              <span className={`text-xs ${isCurrent ? "font-semibold text-zinc-900" : isActive ? "text-zinc-700" : "text-zinc-400"}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`mx-1 h-px w-6 ${i < currentIdx && !cancelled ? "bg-emerald-400" : "bg-zinc-200"}`} />
+            )}
+          </div>
+        );
+      })}
+      {cancelled && (
+        <div className="ml-1 flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+          <span className="text-xs font-semibold text-rose-600">Cancelled</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TripsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -146,6 +188,26 @@ export default function TripsPage() {
 
   async function createTrip() {
     setError(null);
+    if (!form.source.trim() || !form.destination.trim()) {
+      showToast("Source and destination are required", "error");
+      return;
+    }
+    if (!form.vehicleId) {
+      showToast("Select a vehicle", "error");
+      return;
+    }
+    if (!form.driverId) {
+      showToast("Select a driver", "error");
+      return;
+    }
+    if (!form.cargoWeightKg || Number(form.cargoWeightKg) <= 0) {
+      showToast("Enter valid cargo weight", "error");
+      return;
+    }
+    if (!form.plannedDistanceKm || Number(form.plannedDistanceKm) <= 0) {
+      showToast("Enter valid distance", "error");
+      return;
+    }
     const res = await fetch("/api/trips", {
       method: "POST",
       credentials: "include",
@@ -260,6 +322,25 @@ export default function TripsPage() {
         </div>
       )}
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Total Trips</h2>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900">{trips.length}</p>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Dispatched</h2>
+          <p className="mt-1 text-2xl font-semibold text-blue-600">{trips.filter(t => t.status === "DISPATCHED").length}</p>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Completed</h2>
+          <p className="mt-1 text-2xl font-semibold text-emerald-600">{trips.filter(t => t.status === "COMPLETED").length}</p>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Revenue</h2>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900">{formatCurrency(trips.reduce((a, t) => a + (t.revenue ?? 0), 0))}</p>
+        </Card>
+      </div>
+
       <Card>
         <h2 className="mb-4 text-xl font-semibold text-zinc-900">All Trips</h2>
         {loading ? (
@@ -305,7 +386,7 @@ export default function TripsPage() {
                     <td className="py-2 pr-4 text-zinc-600">{t.cargoWeightKg}</td>
                     <td className="py-2 pr-4 text-zinc-600">{t.plannedDistanceKm}</td>
                     <td className="py-2 pr-4">
-                      <StatusBadge status={t.status} />
+                      <TripTimeline status={t.status} />
                     </td>
                     <td className="py-2 pr-4">
                       <div className="flex flex-wrap gap-2">

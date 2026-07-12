@@ -36,6 +36,7 @@ export default function MaintenancePage() {
     cost: "",
     date: new Date().toISOString().slice(0, 10),
   });
+  const [editing, setEditing] = useState<MaintenanceLog | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -64,8 +65,10 @@ export default function MaintenancePage() {
 
   async function createLog() {
     setError(null);
-    const res = await fetch("/api/maintenance", {
-      method: "POST",
+    const url = editing ? `/api/maintenance/${editing.id}` : "/api/maintenance";
+    const method = editing ? "PATCH" : "POST";
+    const res = await fetch(url, {
+      method,
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -78,13 +81,26 @@ export default function MaintenancePage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      showToast(data.error ?? "Failed to create maintenance log", "error");
+      showToast(data.error ?? "Failed to save maintenance log", "error");
       return;
     }
     setCreateOpen(false);
+    setEditing(null);
     setForm({ vehicleId: "", serviceType: "", servicerName: "", cost: "", date: new Date().toISOString().slice(0, 10) });
-    showToast("Maintenance log created — vehicle moved to IN_SHOP");
+    showToast(editing ? "Maintenance log updated" : "Maintenance log created — vehicle moved to IN_SHOP");
     load();
+  }
+
+  function openEdit(log: MaintenanceLog) {
+    setEditing(log);
+    setForm({
+      vehicleId: log.vehicle?.id ?? "",
+      serviceType: log.serviceType,
+      servicerName: log.servicerName ?? "",
+      cost: String(log.cost),
+      date: log.date.slice(0, 10),
+    });
+    setCreateOpen(true);
   }
 
   async function closeLog(id: string) {
@@ -176,12 +192,20 @@ export default function MaintenancePage() {
                     </td>
                     <td className="py-2 pr-4">
                       {l.status === "ACTIVE" ? (
-                        <button
-                          onClick={() => closeLog(l.id)}
-                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-                        >
-                          Close
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEdit(l)}
+                            className="rounded border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => closeLog(l.id)}
+                            className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                          >
+                            Mark Complete
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-xs text-zinc-500">—</span>
                       )}
@@ -201,7 +225,7 @@ export default function MaintenancePage() {
         )}
       </Card>
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Log Maintenance">
+      <Modal open={createOpen} onClose={() => { setCreateOpen(false); setEditing(null); }} title={editing ? "Edit Maintenance Log" : "Log Maintenance"}>
         <FormField label="Vehicle">
           <select className={inputClass} value={form.vehicleId} onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}>
             <option value="">Select vehicle</option>

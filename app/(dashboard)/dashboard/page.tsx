@@ -2,9 +2,22 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, KpiCard } from "@/components/Card";
 import { KpiSkeletonGrid } from "@/components/Skeleton";
+import { StatusBadge } from "@/components/Badge";
 import { inputClass } from "@/components/FormField";
+
+type Trip = {
+  id: string;
+  tripCode: string;
+  source: string;
+  destination: string;
+  status: string;
+  cargoWeightKg: number;
+  vehicle?: { registrationNumber: string } | null;
+  driver?: { name: string } | null;
+};
 
 type Stats = {
   filters?: { type: string | null; status: string | null; region: string | null };
@@ -37,6 +50,21 @@ type Stats = {
 const VEHICLE_TYPES = ["VAN", "TRUCK", "MINI", "OTHER"];
 const VEHICLE_STATUSES = ["AVAILABLE", "ON_TRIP", "IN_SHOP", "RETIRED"];
 
+function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max: number; color?: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="w-full">
+      <div className="flex justify-between text-xs text-zinc-500 mb-1">
+        <span>{value}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -44,6 +72,7 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState({ type: "", status: "", region: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -80,6 +109,13 @@ export default function DashboardPage() {
         ) as string[];
         setRegions(rs);
       })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/trips?status=DISPATCHED", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setRecentTrips((d.trips ?? []).slice(0, 5)))
       .catch(() => {});
   }, []);
 
@@ -190,35 +226,71 @@ export default function DashboardPage() {
             />
           </div>
 
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-zinc-900">Recent Trips</h2>
+              <Link href="/trips" className="text-sm font-medium text-blue-600 hover:underline">
+                View all →
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 text-left text-zinc-500">
+                    <th className="py-2 pr-4">Trip Code</th>
+                    <th className="py-2 pr-4">Route</th>
+                    <th className="py-2 pr-4">Vehicle</th>
+                    <th className="py-2 pr-4">Driver</th>
+                    <th className="py-2 pr-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTrips.map((t) => (
+                    <tr key={t.id} className="border-b border-zinc-100">
+                      <td className="py-2 pr-4 font-medium text-zinc-900">{t.tripCode}</td>
+                      <td className="py-2 pr-4 text-zinc-600">{t.source} → {t.destination}</td>
+                      <td className="py-2 pr-4 text-zinc-600">{t.vehicle?.registrationNumber ?? "—"}</td>
+                      <td className="py-2 pr-4 text-zinc-600">{t.driver?.name ?? "—"}</td>
+                      <td className="py-2 pr-4"><StatusBadge status={t.status} /></td>
+                    </tr>
+                  ))}
+                  {recentTrips.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-zinc-500">
+                        No active trips. Create one in the dispatcher.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <h2 className="text-xl font-semibold text-zinc-900 mb-4">
-                Fleet Overview
+                Fleet Health
               </h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-zinc-600">Available</span>
-                  <span className="font-medium text-zinc-900">
-                    {stats.vehicles.available}
-                  </span>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 mb-1">Vehicle Availability</p>
+                  <ProgressBar value={stats.vehicles.available} max={stats.vehicles.total} color="bg-emerald-500" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-600">On Trip</span>
-                  <span className="font-medium text-zinc-900">
-                    {stats.vehicles.onTrip}
-                  </span>
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 mb-1">Driver Availability</p>
+                  <ProgressBar value={stats.drivers.available} max={stats.drivers.total} color="bg-blue-500" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-600">In Shop</span>
-                  <span className="font-medium text-zinc-900">
-                    {stats.vehicles.inShop}
-                  </span>
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 mb-1">Fleet Utilization</p>
+                  <ProgressBar value={stats.fleetUtilization} max={100} color="bg-indigo-500" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-600">Retired</span>
-                  <span className="font-medium text-zinc-900">
-                    {stats.vehicles.retired}
-                  </span>
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 mb-1">Trip Completion Rate</p>
+                  <ProgressBar
+                    value={stats.trips.completed}
+                    max={Math.max(stats.trips.total, 1)}
+                    color="bg-amber-500"
+                  />
                 </div>
               </div>
             </Card>

@@ -14,6 +14,15 @@ type Settings = {
   updatedAt: string;
 };
 
+const MODULES = ["dashboard", "fleet", "drivers", "trips", "maintenance", "fuelExpenses", "analytics", "settings", "safety", "audit"];
+const ROLES = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
+const ROLE_MODULE_ACCESS: Record<string, string[]> = {
+  FLEET_MANAGER: ["dashboard", "fleet", "maintenance", "analytics", "settings", "audit"],
+  DISPATCHER: ["dashboard", "trips", "audit"],
+  SAFETY_OFFICER: ["dashboard", "drivers", "safety"],
+  FINANCIAL_ANALYST: ["dashboard", "fuelExpenses", "analytics"],
+};
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState({
@@ -143,15 +152,36 @@ export default function SettingsPage() {
           </Card>
 
           <Card>
-            <h2 className="text-xl font-semibold text-zinc-900 mb-4">Role Permissions (JSON)</h2>
-            <FormField label="Editable JSON configuration">
-              <textarea
-                className={`${inputClass} h-64 font-mono text-xs`}
-                value={form.rolePermissions}
-                onChange={(e) => setForm({ ...form, rolePermissions: e.target.value })}
-              />
-            </FormField>
-            <p className="text-xs text-zinc-500">
+            <h2 className="text-xl font-semibold text-zinc-900 mb-4">Role Permissions</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 text-left text-zinc-500">
+                    <th className="py-2 pr-4">Module</th>
+                    {ROLES.map((r) => (
+                      <th key={r} className="py-2 px-3 text-center">{r.replace("_", " ")}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {MODULES.map((mod) => (
+                    <tr key={mod} className="border-b border-zinc-100">
+                      <td className="py-2 pr-4 font-medium text-zinc-900 capitalize">{mod.replace(/([A-Z])/g, " $1")}</td>
+                      {ROLES.map((r) => (
+                        <td key={r} className="py-2 px-3 text-center">
+                          {ROLE_MODULE_ACCESS[r]?.includes(mod) ? (
+                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" title="Granted" />
+                          ) : (
+                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-zinc-200" title="Denied" />
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-zinc-500">
               Last updated: {new Date(settings.updatedAt).toLocaleString()}
             </p>
           </Card>

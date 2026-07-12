@@ -15,6 +15,21 @@ import { Card, KpiCard } from "@/components/Card";
 import { KpiSkeletonGrid, TableSkeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/format";
 
+function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max: number; color?: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-zinc-500 mb-1">
+        <span>{value}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 type Analytics = {
   fleetFuelEfficiency: number;
   operationalCost: number;
@@ -160,6 +175,36 @@ export default function AnalyticsPage() {
         <KpiCard label="Fleet Utilization" value={`${data.fleetUtilization}%`} />
       </div>
 
+      <Card>
+        <h2 className="text-xl font-semibold text-zinc-900 mb-4">Fleet Performance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-sm font-medium text-zinc-700 mb-2">Fleet Utilization</p>
+            <ProgressBar value={data.fleetUtilization} max={100} color="bg-indigo-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-700 mb-2">Fuel Efficiency</p>
+            <ProgressBar value={data.fleetFuelEfficiency} max={20} color="bg-emerald-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-700 mb-2">Revenue vs Cost</p>
+            <ProgressBar
+              value={data.totalRevenue}
+              max={Math.max(data.totalRevenue + data.operationalCost, 1)}
+              color="bg-blue-500"
+            />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-700 mb-2">Maintenance Spend</p>
+            <ProgressBar
+              value={data.totalMaintenance}
+              max={Math.max(data.totalFuelCost + data.totalMaintenance, 1)}
+              color="bg-amber-500"
+            />
+          </div>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-xl font-semibold text-zinc-900 mb-4">Top Costliest Vehicles</h2>
@@ -211,6 +256,37 @@ export default function AnalyticsPage() {
                {formatCurrency(data.totalMaintenance)}
             </span>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="text-xl font-semibold text-zinc-900 mb-4">Insights</h2>
+        <div className="space-y-3">
+          {data.fleetUtilization < 50 && (
+            <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Fleet utilization is at {data.fleetUtilization}% — consider reassigning idle vehicles.
+            </div>
+          )}
+          {data.totalMaintenance > data.totalFuelCost * 0.5 && (
+            <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              Maintenance costs are high relative to fuel spend — review vehicle age and condition.
+            </div>
+          )}
+          {data.fleetFuelEfficiency < 5 && (
+            <div className="rounded-lg bg-orange-50 px-4 py-3 text-sm text-orange-800">
+              Fuel efficiency is below 5 km/L — check for inefficient routes or vehicles.
+            </div>
+          )}
+          {data.vehicleRoi.some(v => v.roi < 0) && (
+            <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {data.vehicleRoi.filter(v => v.roi < 0).length} vehicle(s) have negative ROI — review cost structure.
+            </div>
+          )}
+          {data.fleetUtilization >= 70 && data.fleetFuelEfficiency >= 8 && (
+            <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Fleet is performing well — {data.fleetUtilization}% utilization with {data.fleetFuelEfficiency} km/L efficiency.
+            </div>
+          )}
         </div>
       </Card>
     </div>

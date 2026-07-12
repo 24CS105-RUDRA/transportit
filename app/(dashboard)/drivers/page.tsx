@@ -99,6 +99,27 @@ export default function DriversPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["drivers"] }),
   });
 
+  const suspendMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "SUSPEND" | "ACTIVATE" }) => {
+      const newStatus = action === "SUSPEND" ? "SUSPENDED" : "AVAILABLE";
+      const res = await fetch(`/api/drivers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to update driver");
+      return json;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["drivers"] }),
+  });
+
+  function safetyScoreColor(score: number) {
+    if (score >= 80) return "text-emerald-600 bg-emerald-50";
+    if (score >= 50) return "text-amber-600 bg-amber-50";
+    return "text-rose-600 bg-rose-50";
+  }
+
   function openAdd() {
     setEditing(null);
     setForm(emptyForm);
@@ -220,11 +241,30 @@ export default function DriversPage() {
                   {expired && " (expired)"}
                 </td>
                 <td className="px-4 py-3">{d.contactNumber}</td>
-                <td className="px-4 py-3">{d.safetyScore}%</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${safetyScoreColor(d.safetyScore)}`}>
+                    {d.safetyScore}%
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={d.status} />
                 </td>
                 <td className="px-4 py-3 text-right">
+                  {d.status !== "SUSPENDED" ? (
+                    <button
+                      onClick={() => suspendMutation.mutate({ id: d.id, action: "SUSPEND" })}
+                      className="mr-2 rounded border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                    >
+                      Suspend
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => suspendMutation.mutate({ id: d.id, action: "ACTIVATE" })}
+                      className="mr-2 rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                    >
+                      Activate
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(d)}
                     className="mr-3 text-xs font-medium text-zinc-600 hover:text-zinc-900"

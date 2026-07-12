@@ -333,6 +333,11 @@ export default function FuelExpensesPage() {
         <FormField label="Cost">
           <input type="number" className={inputClass} value={fuelForm.cost} onChange={(e) => setFuelForm({ ...fuelForm, cost: e.target.value })} />
         </FormField>
+        {fuelForm.liters && fuelForm.cost && Number(fuelForm.liters) > 0 && (
+          <div className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700 mb-4">
+            Total: {formatCurrency(Number(fuelForm.cost))} · Cost/L: {formatCurrency(Number(fuelForm.cost) / Number(fuelForm.liters))}
+          </div>
+        )}
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={() => setFuelOpen(false)} className={buttonSecondaryClass}>
             Cancel
@@ -370,6 +375,11 @@ export default function FuelExpensesPage() {
         <FormField label="Other / Misc">
           <input type="number" className={inputClass} value={expenseForm.otherMisc} onChange={(e) => setExpenseForm({ ...expenseForm, otherMisc: e.target.value })} />
         </FormField>
+        {expenseForm.toll && expenseForm.otherMisc && (
+          <div className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700 mb-4">
+            Total: {formatCurrency(Number(expenseForm.toll || 0) + Number(expenseForm.otherMisc || 0))}
+          </div>
+        )}
         <FormField label="Status">
           <select className={inputClass} value={expenseForm.status} onChange={(e) => setExpenseForm({ ...expenseForm, status: e.target.value })}>
             <option value="PENDING">PENDING</option>
