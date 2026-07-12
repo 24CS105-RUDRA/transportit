@@ -181,14 +181,14 @@ export default function MaintenancePage() {
                           Close
                         </button>
                       ) : (
-                        <span className="text-xs text-zinc-400">—</span>
+                        <span className="text-xs text-zinc-500">—</span>
                       )}
                     </td>
                   </tr>
                 ))}
                 {logs.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-zinc-400">
+                    <td colSpan={7} className="py-4 text-center text-zinc-500">
                       No maintenance logs yet.
                     </td>
                   </tr>

@@ -226,7 +226,7 @@ export default function FuelExpensesPage() {
                   ))}
                   {fuelLogs.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-zinc-400">
+                      <td colSpan={5} className="py-4 text-center text-zinc-500">
                         No fuel logs yet.
                       </td>
                     </tr>
@@ -289,7 +289,7 @@ export default function FuelExpensesPage() {
                   ))}
                   {expenses.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-4 text-center text-zinc-400">
+                      <td colSpan={6} className="py-4 text-center text-zinc-500">
                         No expenses yet.
                       </td>
                     </tr>

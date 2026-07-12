@@ -145,7 +145,7 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, rolePermissions: e.target.value })}
               />
             </FormField>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-500">
               Last updated: {new Date(settings.updatedAt).toLocaleString()}
             </p>
           </Card>

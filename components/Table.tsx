@@ -26,7 +26,7 @@ export function Thead({ columns }: { columns: string[] }) {
 export function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-zinc-400">
+      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-zinc-500">
         {message}
       </td>
     </tr>
@@ -36,7 +36,7 @@ export function EmptyRow({ colSpan, message }: { colSpan: number; message: strin
 export function LoadingRow({ colSpan }: { colSpan: number }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-zinc-400">
+      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-zinc-500">
         Loading…
       </td>
     </tr>

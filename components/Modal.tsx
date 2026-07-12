@@ -17,7 +17,7 @@ export function Modal({
           <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="rounded-full p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
             aria-label="Close"
           >
             ✕

@@ -276,7 +276,7 @@ export default function TripsPage() {
                           </>
                         )}
                         {t.status === "COMPLETED" && (
-                          <span className="text-xs text-zinc-400">Done</span>
+                          <span className="text-xs text-zinc-500">Done</span>
                         )}
                       </div>
                     </td>
@@ -284,7 +284,7 @@ export default function TripsPage() {
                 ))}
                 {trips.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-4 text-center text-zinc-400">
+                    <td colSpan={8} className="py-4 text-center text-zinc-500">
                       No trips yet. Create one to get started.
                     </td>
                   </tr>

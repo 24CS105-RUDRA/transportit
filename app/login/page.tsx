@@ -78,7 +78,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 border-t border-zinc-100 pt-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
             Demo accounts (password: password123)
           </p>
           <div className="flex flex-col gap-1">

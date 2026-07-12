@@ -39,7 +39,7 @@ export function Sidebar({
     <aside className="flex h-screen w-64 flex-col border-r border-zinc-200 bg-white">
       <div className="border-b border-zinc-100 px-5 py-5">
         <p className="text-lg font-semibold text-zinc-900">TransitOps</p>
-        <p className="text-xs text-zinc-400">Transport Operations</p>
+        <p className="text-xs text-zinc-500">Transport Operations</p>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {NAV_ITEMS.filter((item) => allowed.has(item.module)).map((item) => {
@@ -61,8 +61,8 @@ export function Sidebar({
       </nav>
       <div className="border-t border-zinc-100 px-5 py-4">
         <p className="truncate text-sm font-medium text-zinc-900">{name}</p>
-        <p className="truncate text-xs text-zinc-400">{email}</p>
-        <p className="mt-1 text-xs text-zinc-400">{role.replaceAll("_", " ")}</p>
+        <p className="truncate text-xs text-zinc-500">{email}</p>
+        <p className="mt-1 text-xs text-zinc-500">{role.replaceAll("_", " ")}</p>
         <button
           onClick={handleLogout}
           className="mt-3 w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
