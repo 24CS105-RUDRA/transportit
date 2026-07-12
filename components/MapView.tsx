@@ -58,12 +58,17 @@ function MapInner({ vehicles, selectedId, onSelect, trackPositions }: MapInnerPr
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
+    const container = mapRef.current;
+    if ((container as any)._leaflet_id) return;
 
+    let cancelled = false;
     async function init() {
       const L = (await import("leaflet")).default;
       await import("leaflet/dist/leaflet.css");
+      if (cancelled || !mapRef.current) return;
+      if ((container as any)._leaflet_id) return;
 
-      const map = L.map(mapRef.current!, {
+      const map = L.map(container, {
         center: [22.5, 78.0],
         zoom: 5,
         zoomControl: true,
@@ -110,6 +115,7 @@ function MapInner({ vehicles, selectedId, onSelect, trackPositions }: MapInnerPr
     init();
 
     return () => {
+      cancelled = true;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
