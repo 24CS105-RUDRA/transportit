@@ -41,12 +41,35 @@ type Analytics = {
   vehicleRoi: { plate: string; model: string; revenue: number; cost: number; roi: number }[];
 };
 
+const PRESETS = [
+  { label: "Last 7 Days", days: 7 },
+  { label: "Last 30 Days", days: 30 },
+  { label: "Last 90 Days", days: 90 },
+  { label: "This Year", days: 365 },
+  { label: "All Time", days: 0 },
+] as const;
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [activePreset, setActivePreset] = useState<number | null>(null);
+
+  function applyPreset(days: number, idx: number) {
+    setActivePreset(idx);
+    if (days === 0) {
+      setFrom("");
+      setTo("");
+    } else {
+      const now = new Date();
+      const end = now.toISOString().split("T")[0];
+      const start = new Date(now.getTime() - days * 86400000).toISOString().split("T")[0];
+      setFrom(start);
+      setTo(end);
+    }
+  }
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -110,35 +133,64 @@ export default function AnalyticsPage() {
   }));
   const costColors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e"];
 
+  const filterLabel = from || to
+    ? `${from || "Start"} to ${to || "Now"}`
+    : "All Time";
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between no-print">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900">Analytics</h1>
           <p className="mt-2 text-lg text-zinc-600">Fleet performance and cost intelligence</p>
         </div>
-        <button
-          onClick={downloadCsv}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          Export CSV
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          Print / PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={downloadCsv}
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Print / PDF
+          </button>
+        </div>
       </div>
 
-      <Card>
+      {/* Print header — only shows when printing */}
+      <div className="hidden print-header">
+        <h1 className="text-2xl font-bold">TransitOps Analytics Report</h1>
+        <p className="text-sm text-zinc-600">Period: {filterLabel}</p>
+        <p className="text-xs text-zinc-400">Generated: {new Date().toLocaleDateString("en-IN")}</p>
+      </div>
+
+      <Card className="no-print">
         <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((p, i) => (
+              <button
+                key={p.label}
+                onClick={() => applyPreset(p.days, i)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                  activePreset === i
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="h-6 w-px bg-zinc-200" />
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-500">From</label>
             <input
               type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => { setFrom(e.target.value); setActivePreset(null); }}
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
             />
           </div>
@@ -147,16 +199,13 @@ export default function AnalyticsPage() {
             <input
               type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => { setTo(e.target.value); setActivePreset(null); }}
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
             />
           </div>
           {(from || to) && (
             <button
-              onClick={() => {
-                setFrom("");
-                setTo("");
-              }}
+              onClick={() => { setFrom(""); setTo(""); setActivePreset(null); }}
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50"
             >
               Clear
