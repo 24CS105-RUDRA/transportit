@@ -1,150 +1,256 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, KpiCard } from "@/components/Card";
+
+type Stats = {
+  vehicles: {
+    total: number;
+    available: number;
+    onTrip: number;
+    inShop: number;
+    retired: number;
+  };
+  drivers: {
+    total: number;
+    available: number;
+    onTrip: number;
+    offDuty: number;
+    suspended: number;
+  };
+  trips: {
+    total: number;
+    draft: number;
+    dispatched: number;
+    completed: number;
+    cancelled: number;
+  };
+  fleetUtilization: number;
+  maintenanceActive: number;
+  expiringLicenses: number;
+};
+
 export default function DashboardPage() {
+  const router = useRouter();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/dashboard/stats", { credentials: "include" })
+      .then(async (res) => {
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+        if (!res.ok) throw new Error("Failed to load stats");
+        return res.json();
+      })
+      .then((data) => {
+        if (active && data) setStats(data);
+      })
+      .catch((e) => active && setError(e.message))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900">TransitOps Dashboard</h1>
-        <p className="mt-2 text-lg text-zinc-600">Smart Transport Operations Platform - Fleet Management System</p>
+        <p className="mt-2 text-lg text-zinc-600">
+          Smart Transport Operations Platform - Fleet Management System
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-zinc-900">Total Vehicles</h3>
-          <p className="mt-2 text-3xl font-bold text-blue-600">20</p>
-          <p className="mt-1 text-sm text-zinc-500">5 Available, 13 On Trip</p>
-        </div>
+      {loading && (
+        <p className="text-sm text-zinc-500">Loading live metrics…</p>
+      )}
+      {error && (
+        <p className="text-sm text-rose-600">Error: {error}</p>
+      )}
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-zinc-900">Active Drivers</h3>
-          <p className="mt-2 text-3xl font-bold text-green-600">45</p>
-          <p className="mt-1 text-sm text-zinc-500">42 Available, 3 On Trip</p>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-zinc-900">Today&apos;s Trips</h3>
-          <p className="mt-2 text-3xl font-bold text-purple-600">12</p>
-          <p className="mt-1 text-sm text-zinc-500">3 Dispatched, 9 Completed</p>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-zinc-900">Fuel Cost Today</h3>
-          <p className="mt-2 text-3xl font-bold text-amber-600">$285</p>
-          <p className="mt-1 text-sm text-zinc-500">~$12.50 per vehicle</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">Recent Activity</h2>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm text-zinc-600">Trip TR003 dispatched - Van VAN-09 to East Yard</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
-              <span className="text-sm text-zinc-600">Driver Alex Morgan added to system</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-rose-500" />
-              <span className="text-sm text-zinc-600">Driver Megan Blake suspended - License compliance</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-purple-500" />
-              <span className="text-sm text-zinc-600">Vehicle MIN-01 in shop - Oil change due</span>
-            </div>
+      {stats && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              label="Total Vehicles"
+              value={stats.vehicles.total}
+              sub={`${stats.vehicles.available} Available, ${stats.vehicles.onTrip} On Trip`}
+            />
+            <KpiCard
+              label="Active Drivers"
+              value={stats.drivers.total}
+              sub={`${stats.drivers.available} Available, ${stats.drivers.onTrip} On Trip`}
+            />
+            <KpiCard
+              label="Trips (Total)"
+              value={stats.trips.total}
+              sub={`${stats.trips.dispatched} Dispatched, ${stats.trips.completed} Completed`}
+            />
+            <KpiCard
+              label="Fleet Utilization"
+              value={`${stats.fleetUtilization}%`}
+              sub={`${stats.vehicles.onTrip} of ${stats.vehicles.total - stats.vehicles.retired} active`}
+            />
           </div>
-        </div>
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">Critical Alerts</h2>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="h-2 w-2 rounded-full bg-rose-500 mt-1" />
-              <div>
-                <p className="text-sm font-medium text-zinc-900">License Expiry</p>
-                <p className="text-xs text-zinc-500">Carlos Reyes - License expires Jan 15, 2026</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <h2 className="text-xl font-semibold text-zinc-900 mb-4">
+                Fleet Overview
+              </h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Available</span>
+                  <span className="font-medium text-zinc-900">
+                    {stats.vehicles.available}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">On Trip</span>
+                  <span className="font-medium text-zinc-900">
+                    {stats.vehicles.onTrip}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">In Shop</span>
+                  <span className="font-medium text-zinc-900">
+                    {stats.vehicles.inShop}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Retired</span>
+                  <span className="font-medium text-zinc-900">
+                    {stats.vehicles.retired}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="h-2 w-2 rounded-full bg-orange-500 mt-1" />
-              <div>
-                <p className="text-sm font-medium text-zinc-900">Capacity Warning</p>
-                <p className="text-xs text-zinc-500">Vehicle TRK-12 at 95% capacity utilization</p>
+            </Card>
+
+            <Card>
+              <h2 className="text-xl font-semibold text-zinc-900 mb-4">
+                Critical Alerts
+              </h2>
+              <div className="space-y-3">
+                {stats.expiringLicenses > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="h-2 w-2 rounded-full bg-rose-500 mt-1" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">
+                        License Expiry
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {stats.expiringLicenses} driver(s) license expiring within
+                        30 days
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {stats.maintenanceActive > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="h-2 w-2 rounded-full bg-amber-500 mt-1" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">
+                        Vehicles In Shop
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {stats.maintenanceActive} vehicle(s) currently under
+                        maintenance
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {stats.expiringLicenses === 0 && stats.maintenanceActive === 0 && (
+                  <p className="text-sm text-green-600">
+                    No critical alerts at this time.
+                  </p>
+                )}
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="h-2 w-2 rounded-full bg-amber-500 mt-1" />
-                <div>
-                <p className="text-sm font-medium text-zinc-900">Vehicle Maintenance</p>
-                <p className="text-xs text-zinc-500">MIN-01 scheduled for oil change tomorrow</p>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-3">
+                Quick Actions
+              </h2>
+              <div className="space-y-2">
+                <button
+                  onClick={() => router.push("/drivers")}
+                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
+                >
+                  + Manage Drivers
+                </button>
+                <button
+                  onClick={() => router.push("/fleet")}
+                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
+                >
+                  + Register Vehicle
+                </button>
+                <button
+                  onClick={() => router.push("/trips")}
+                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
+                >
+                  + Create Trip
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-3">Quick Actions</h2>
-          <div className="space-y-2">
-            <button className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors">
-              + Add Driver
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors">
-              + Register Vehicle
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors">
-              + Create Trip
-            </button>
-          </div>
-        </div>
+            <Card>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-3">
+                Trip Status
+              </h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Draft</span>
+                  <span className="text-zinc-900">{stats.trips.draft}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Dispatched</span>
+                  <span className="text-zinc-900">{stats.trips.dispatched}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Completed</span>
+                  <span className="text-zinc-900">{stats.trips.completed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Cancelled</span>
+                  <span className="text-zinc-900">{stats.trips.cancelled}</span>
+                </div>
+              </div>
+            </Card>
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-3">System Status</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Database</span>
-              <span className="text-green-600">Connected</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">API Server</span>
-              <span className="text-green-600">Operational</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Auth Service</span>
-              <span className="text-green-600">Secure</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Rule Engine</span>
-              <span className="text-green-600">Active</span>
-            </div>
+            <Card>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-3">
+                Drivers
+              </h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Available</span>
+                  <span className="text-zinc-900">{stats.drivers.available}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">On Trip</span>
+                  <span className="text-zinc-900">{stats.drivers.onTrip}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Off Duty</span>
+                  <span className="text-zinc-900">{stats.drivers.offDuty}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">Suspended</span>
+                  <span className="text-zinc-900">{stats.drivers.suspended}</span>
+                </div>
+              </div>
+            </Card>
           </div>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-3">Role Access</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Fleet Manager</span>
-              <span className="text-zinc-900">Full Access</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Dispatcher</span>
-              <span className="text-zinc-900">Trip Management</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Safety Officer</span>
-              <span className="text-zinc-900">Driver Records</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-600">Financial Analyst</span>
-              <span className="text-zinc-900">Financial Reports</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
