@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { UserRole } from "@prisma/client";
@@ -31,6 +32,25 @@ const ROLE_MODULES: Record<UserRole, ModuleKey[]> = {
   FINANCIAL_ANALYST: ["dashboard", "fuelExpenses", "analytics"],
 };
 
+function parseRolePermissions(raw: string | null): Record<string, string[]> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const result: Record<string, string[]> = {};
+    for (const [role, val] of Object.entries(parsed)) {
+      if (Array.isArray(val)) {
+        result[role] = val.filter((v) => typeof v === "string");
+      } else if (typeof val === "string") {
+        result[role] = val.split(",").map((s) => s.trim());
+      }
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 function Icon({ d, className = "" }: { d: string; className?: string }) {
   return (
     <svg
@@ -59,7 +79,23 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const allowed = new Set(ROLE_MODULES[role] ?? []);
+  const [allowed, setAllowed] = useState<Set<ModuleKey>>(() => new Set(ROLE_MODULES[role] ?? []));
+
+  useEffect(() => {
+    fetch("/api/settings", { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        const settings = data?.settings;
+        if (!settings?.rolePermissions) return;
+        const custom = parseRolePermissions(settings.rolePermissions);
+        if (custom && custom[role]) {
+          const modules = custom[role].filter((m): m is ModuleKey => (ALL_MODULES as string[]).includes(m));
+          setAllowed(new Set(modules));
+        }
+      })
+      .catch(() => {});
+  }, [role]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });

@@ -1,4 +1,5 @@
 import { UserRole } from "@prisma/client";
+import { prisma } from "./prisma";
 
 export const MODULES = {
   dashboard: "dashboard",
@@ -34,6 +35,44 @@ export const ROLE_MODULE_ACCESS: Record<UserRole, ModuleKey[]> = {
 
 export function canAccessModule(role: UserRole, moduleKey: ModuleKey): boolean {
   return ROLE_MODULE_ACCESS[role]?.includes(moduleKey) ?? false;
+}
+
+function parseRolePermissions(raw: string | null): Record<string, string[]> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const result: Record<string, string[]> = {};
+    for (const [role, val] of Object.entries(parsed)) {
+      if (Array.isArray(val)) {
+        result[role] = val.filter((v) => typeof v === "string");
+      } else if (typeof val === "string") {
+        result[role] = val.split(",").map((s) => s.trim());
+      }
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+export async function getDynamicModules(role: UserRole): Promise<ModuleKey[]> {
+  try {
+    const settings = await prisma.settings.findFirst();
+    if (!settings?.rolePermissions) return ROLE_MODULE_ACCESS[role] ?? [];
+    const custom = parseRolePermissions(settings.rolePermissions);
+    if (custom && custom[role]) {
+      return custom[role].filter((m): m is ModuleKey => (ALL_MODULES as string[]).includes(m));
+    }
+    return ROLE_MODULE_ACCESS[role] ?? [];
+  } catch {
+    return ROLE_MODULE_ACCESS[role] ?? [];
+  }
+}
+
+export async function canAccessModuleDynamic(role: UserRole, moduleKey: ModuleKey): Promise<boolean> {
+  const modules = await getDynamicModules(role);
+  return modules.includes(moduleKey);
 }
 
 export const ROUTE_MODULE_MAP: { prefix: string; module: ModuleKey }[] = [

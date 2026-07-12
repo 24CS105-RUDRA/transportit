@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { moduleForPath, canAccessModule } from "@/lib/rbac";
+import { moduleForPath, canAccessModuleDynamic } from "@/lib/rbac";
 
 const PUBLIC_PATHS = ["/login"];
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
@@ -19,7 +19,7 @@ export function proxy(request: NextRequest) {
   }
 
   const moduleKey = moduleForPath(pathname);
-  if (moduleKey && !canAccessModule(session.role, moduleKey)) {
+  if (moduleKey && !(await canAccessModuleDynamic(session.role, moduleKey))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
