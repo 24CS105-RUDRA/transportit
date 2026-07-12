@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { inputClass, buttonPrimaryClass } from "@/components/FormField";
 
 const DEMO_ACCOUNTS = [
@@ -12,7 +11,6 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState<string | null>(null);
@@ -27,14 +25,19 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await res.json().catch(() => null)
+        : await res.text().catch(() => "");
       if (!res.ok) {
-        setError(data.error ?? "Login failed");
+        setError(typeof data === "object" && data && "error" in data ? data.error : "Login failed");
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      // Hard navigation guarantees the freshly-set auth cookie is sent and the
+      // dashboard layout (which reads it server-side) renders correctly.
+      window.location.href = "/dashboard";
     } finally {
       setLoading(false);
     }
