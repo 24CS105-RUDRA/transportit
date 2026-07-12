@@ -1,70 +1,244 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
+import { Card } from "@/components/Card";
+import { Modal } from "@/components/Modal";
+import { FormField, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "@/components/FormField";
+import { StatusBadge } from "@/components/Badge";
+
+type Vehicle = { id: string; registrationNumber: string; nameModel: string };
+type MaintenanceLog = {
+  id: string;
+  serviceType: string;
+  servicerName: string | null;
+  cost: number;
+  date: string;
+  status: string;
+  vehicle?: Vehicle | null;
+};
+
 export default function MaintenancePage() {
+  const [logs, setLogs] = useState<MaintenanceLog[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    vehicleId: "",
+    serviceType: "",
+    servicerName: "",
+    cost: "",
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const [l, v] = await Promise.all([
+        fetch("/api/maintenance", { credentials: "include" }),
+        fetch("/api/vehicles", { credentials: "include" }),
+      ]);
+      if (l.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      const [ld, vd] = await Promise.all([l.json(), v.json()]);
+      setLogs(ld.logs);
+      setVehicles(vd.vehicles);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  async function createLog() {
+    setError(null);
+    const res = await fetch("/api/maintenance", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        vehicleId: form.vehicleId,
+        serviceType: form.serviceType,
+        servicerName: form.servicerName || undefined,
+        cost: Number(form.cost),
+        date: form.date,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to create maintenance log");
+      return;
+    }
+    setCreateOpen(false);
+    setForm({ vehicleId: "", serviceType: "", servicerName: "", cost: "", date: new Date().toISOString().slice(0, 10) });
+    showToast("Maintenance log created — vehicle moved to IN_SHOP");
+    load();
+  }
+
+  async function closeLog(id: string) {
+    setError(null);
+    const res = await fetch(`/api/maintenance/${id}/close`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to close maintenance log");
+      return;
+    }
+    showToast("Maintenance log closed — vehicle back to AVAILABLE");
+    load();
+  }
+
+  const totalCost = logs.reduce((a, l) => a + l.cost, 0);
+  const activeCount = logs.filter((l) => l.status === "ACTIVE").length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900">Maintenance Management</h1>
-        <p className="mt-2 text-lg text-zinc-600">Vehicle service logs and maintenance tracking</p>
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-zinc-900">Maintenance Management</h1>
+          <p className="mt-2 text-lg text-zinc-600">Vehicle service logs and maintenance tracking</p>
+        </div>
+        <button onClick={() => setCreateOpen(true)} className={buttonPrimaryClass}>
+          + Log Maintenance
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">Active Maintenance</h2>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-zinc-900">MIN-01 - Oil Change</p>
-                <p className="text-xs text-zinc-500">Due tomorrow</p>
-              </div>
-              <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">ACTIVE</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-zinc-900">TRCK-12 - Tyre Replacement</p>
-                <p className="text-xs text-zinc-500">Completed 2 weeks ago</p>
-              </div>
-              <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">COMPLETED</span>
-            </div>
-          </div>
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
         </div>
+      )}
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">Service History</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b border-zinc-100">
-              <span className="text-sm text-zinc-600">Total Services</span>
-              <span className="text-sm font-medium text-zinc-900">48</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-zinc-100">
-              <span className="text-sm text-zinc-600">This Month</span>
-              <span className="text-sm font-medium text-zinc-900">8</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-zinc-100">
-              <span className="text-sm text-zinc-600">Total Cost</span>
-              <span className="text-sm font-medium text-zinc-900">$12,450</span>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Total Logs</h2>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900">{logs.length}</p>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Active (In Shop)</h2>
+          <p className="mt-1 text-2xl font-semibold text-orange-600">{activeCount}</p>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium text-zinc-500">Total Cost</h2>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900">
+            ${totalCost.toLocaleString()}
+          </p>
+        </Card>
       </div>
 
-      <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-zinc-900 mb-4">Upcoming Maintenance</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-lg">
-            <div className="h-2 w-2 rounded-full bg-amber-500" />
-            <span className="text-sm text-zinc-600">MIN-01 - Oil Change (Tomorrow)</span>
+      <Card>
+        <h2 className="mb-4 text-xl font-semibold text-zinc-900">Service History</h2>
+        {loading ? (
+          <p className="text-sm text-zinc-500">Loading…</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-left text-zinc-500">
+                  <th className="py-2 pr-4">Vehicle</th>
+                  <th className="py-2 pr-4">Service</th>
+                  <th className="py-2 pr-4">Servicer</th>
+                  <th className="py-2 pr-4">Cost</th>
+                  <th className="py-2 pr-4">Date</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((l) => (
+                  <tr key={l.id} className="border-b border-zinc-100">
+                    <td className="py-2 pr-4 font-medium text-zinc-900">
+                      {l.vehicle?.registrationNumber ?? "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-zinc-600">{l.serviceType}</td>
+                    <td className="py-2 pr-4 text-zinc-600">{l.servicerName ?? "—"}</td>
+                    <td className="py-2 pr-4 text-zinc-600">${l.cost.toLocaleString()}</td>
+                    <td className="py-2 pr-4 text-zinc-600">
+                      {new Date(l.date).toLocaleDateString()}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <StatusBadge status={l.status} />
+                    </td>
+                    <td className="py-2 pr-4">
+                      {l.status === "ACTIVE" ? (
+                        <button
+                          onClick={() => closeLog(l.id)}
+                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                        >
+                          Close
+                        </button>
+                      ) : (
+                        <span className="text-xs text-zinc-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {logs.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-4 text-center text-zinc-400">
+                      No maintenance logs yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-lg">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-sm text-zinc-600">VAN-09 - Tire Rotation (3 days)</span>
-          </div>
-          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-lg">
-            <div className="h-2 w-2 rounded-full bg-purple-500" />
-            <span className="text-sm text-zinc-600">TRCK-12 - Service Check (1 week)</span>
-          </div>
+        )}
+      </Card>
+
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Log Maintenance">
+        <FormField label="Vehicle">
+          <select className={inputClass} value={form.vehicleId} onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}>
+            <option value="">Select vehicle</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.registrationNumber} — {v.nameModel}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Service Type">
+          <input className={inputClass} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} placeholder="e.g. Oil Change" />
+        </FormField>
+        <FormField label="Servicer Name (optional)">
+          <input className={inputClass} value={form.servicerName} onChange={(e) => setForm({ ...form, servicerName: e.target.value })} />
+        </FormField>
+        <FormField label="Cost">
+          <input type="number" className={inputClass} value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
+        </FormField>
+        <FormField label="Date">
+          <input type="date" className={inputClass} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+        </FormField>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={() => setCreateOpen(false)} className={buttonSecondaryClass}>
+            Cancel
+          </button>
+          <button onClick={createLog} className={buttonPrimaryClass}>
+            Create
+          </button>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }
