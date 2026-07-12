@@ -5,6 +5,35 @@ import { Card } from "@/components/Card";
 import { FormField, inputClass, buttonPrimaryClass } from "@/components/FormField";
 import { CardSkeleton } from "@/components/Skeleton";
 
+const MODULES = ["dashboard", "fleet", "drivers", "trips", "maintenance", "fuelExpenses", "analytics", "settings", "safety", "audit"];
+const MODULE_LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
+  fleet: "Fleet Management",
+  drivers: "Driver Management",
+  trips: "Trip Dispatcher",
+  maintenance: "Maintenance",
+  fuelExpenses: "Fuel & Expenses",
+  analytics: "Analytics",
+  settings: "System Settings",
+  safety: "Safety",
+  audit: "Audit Log",
+};
+const ROLES = ["SUPER_ADMIN", "FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  FLEET_MANAGER: "Fleet Manager",
+  DISPATCHER: "Dispatcher",
+  SAFETY_OFFICER: "Safety Officer",
+  FINANCIAL_ANALYST: "Financial Analyst",
+};
+const ROLE_ACCESS: Record<string, string[]> = {
+  SUPER_ADMIN: [...MODULES],
+  FLEET_MANAGER: ["dashboard", "fleet", "maintenance", "analytics", "settings", "audit"],
+  DISPATCHER: ["dashboard", "trips", "audit"],
+  SAFETY_OFFICER: ["dashboard", "drivers", "safety"],
+  FINANCIAL_ANALYST: ["dashboard", "fuelExpenses", "analytics"],
+};
+
 type Settings = {
   id: string;
   depotName: string;
@@ -119,6 +148,48 @@ export default function SettingsPage() {
             {!canEdit && (
               <p className="text-xs text-zinc-400 mt-2">Only Super Admin and Fleet Manager can edit settings.</p>
             )}
+          </Card>
+
+          <Card>
+            <h2 className="text-xl font-semibold text-zinc-900 mb-4">Role Permissions</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 text-left text-zinc-500">
+                    <th className="py-2 pr-4 min-w-[160px]">Module</th>
+                    {ROLES.map((r) => (
+                      <th key={r} className="py-2 px-3 text-center min-w-[100px]">
+                        <span className="text-xs">{ROLE_LABELS[r]}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {MODULES.map((mod) => (
+                    <tr key={mod} className="border-b border-zinc-100">
+                      <td className="py-2.5 pr-4 font-medium text-zinc-900">{MODULE_LABELS[mod]}</td>
+                      {ROLES.map((r) => (
+                        <td key={r} className="py-2.5 px-3 text-center">
+                          {ROLE_ACCESS[r]?.includes(mod) ? (
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-emerald-500 bg-emerald-500 text-white">
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                              </svg>
+                            </span>
+                          ) : (
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-zinc-200 bg-zinc-100">
+                              <svg className="h-3 w-3 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </>
       )}
