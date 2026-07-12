@@ -32,6 +32,8 @@ export default function SafetyPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendResult, setSendResult] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     fetch("/api/drivers", { credentials: "include" })
@@ -70,15 +72,36 @@ export default function SafetyPage() {
         </div>
         <button
           onClick={async () => {
-            const res = await fetch("/api/safety/license-reminders", { credentials: "include" });
-            const data = await res.json();
-            alert(data.message);
+            setSending(true);
+            setSendResult(null);
+            try {
+              const res = await fetch("/api/safety/license-reminders", { credentials: "include" });
+              const data = await res.json();
+              if (!res.ok) {
+                setSendResult(`Error: ${data.error ?? "Failed"}`);
+              } else {
+                setSendResult(
+                  `Sent ${data.sent} email(s) · ${data.failed} failed · ${data.total} total drivers with expiring/expired licenses`
+                );
+              }
+            } catch {
+              setSendResult("Failed to send reminders");
+            } finally {
+              setSending(false);
+            }
           }}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          disabled={sending}
+          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
         >
-          Send License Reminders (stub)
+          {sending ? "Sending…" : "Send License Reminders"}
         </button>
       </div>
+
+      {sendResult && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${sendResult.startsWith("Error") || sendResult.startsWith("Failed") ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+          {sendResult}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
