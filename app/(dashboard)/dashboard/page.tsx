@@ -81,21 +81,25 @@ export default function DashboardPage() {
               label="Total Vehicles"
               value={stats.vehicles.total}
               sub={`${stats.vehicles.available} Available, ${stats.vehicles.onTrip} On Trip`}
+              href="/fleet"
             />
             <KpiCard
               label="Active Drivers"
               value={stats.drivers.total}
               sub={`${stats.drivers.available} Available, ${stats.drivers.onTrip} On Trip`}
+              href="/drivers"
             />
             <KpiCard
               label="Trips (Total)"
               value={stats.trips.total}
               sub={`${stats.trips.dispatched} Dispatched, ${stats.trips.completed} Completed`}
+              href="/trips"
             />
             <KpiCard
               label="Fleet Utilization"
               value={`${stats.fleetUtilization}%`}
               sub={`${stats.vehicles.onTrip} of ${stats.vehicles.total - stats.vehicles.retired} active`}
+              href="/maintenance"
             />
           </div>
 
