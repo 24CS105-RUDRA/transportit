@@ -9,6 +9,36 @@ export class RuleViolation extends Error {
   }
 }
 
+let auditActor: string | null = null;
+export function setAuditActor(email: string | null) {
+  auditActor = email;
+}
+
+export async function logAudit(
+  entityType: string,
+  entityId: string,
+  action: string,
+  fromStatus?: string | null,
+  toStatus?: string | null,
+  note?: string
+) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        entityType,
+        entityId,
+        action,
+        fromStatus: fromStatus ?? null,
+        toStatus: toStatus ?? null,
+        note: note ?? null,
+        actorEmail: auditActor,
+      },
+    });
+  } catch {
+    // audit failures should never break the main operation
+  }
+}
+
 export async function createTrip(input: {
   tripCode: string;
   source: string;
@@ -38,7 +68,7 @@ export async function createTrip(input: {
     throw new RuleViolation("Driver's license has expired");
   }
 
-  return prisma.trip.create({
+  const trip = await prisma.trip.create({
     data: {
       tripCode: input.tripCode,
       source: input.source,
@@ -50,10 +80,13 @@ export async function createTrip(input: {
       status: "DRAFT",
     },
   });
+  await logAudit("TRIP", trip.id, "CREATE", null, "DRAFT", trip.tripCode);
+  return trip;
 }
 
 export async function dispatchTrip(tripId: string) {
-  return prisma.$transaction(async (tx) => {
+  let updated: any;
+  await prisma.$transaction(async (tx) => {
     const trip = await tx.trip.findUnique({
       include: { vehicle: true, driver: true },
       where: { id: tripId },
@@ -98,11 +131,13 @@ export async function dispatchTrip(tripId: string) {
       where: { id: driver.id },
       data: { status: DriverStatus.ON_TRIP },
     });
-    return tx.trip.update({
+    updated = await tx.trip.update({
       where: { id: tripId },
       data: { status: TripStatus.DISPATCHED, dispatchedAt: new Date() },
     });
   });
+  await logAudit("TRIP", tripId, "DISPATCH", "DRAFT", "DISPATCHED");
+  return updated;
 }
 
 export async function completeTrip(
@@ -114,7 +149,8 @@ export async function completeTrip(
     revenue?: number;
   }
 ) {
-  return prisma.$transaction(async (tx) => {
+  let updatedTrip: any;
+  await prisma.$transaction(async (tx) => {
     const trip = await tx.trip.findUnique({
       include: { vehicle: true, driver: true },
       where: { id: tripId },
@@ -136,7 +172,7 @@ export async function completeTrip(
       data: { status: DriverStatus.AVAILABLE },
     });
 
-    const updatedTrip = await tx.trip.update({
+    updatedTrip = await tx.trip.update({
       where: { id: tripId },
       data: {
         status: TripStatus.COMPLETED,
@@ -161,10 +197,14 @@ export async function completeTrip(
 
     return updatedTrip;
   });
+  await logAudit("TRIP", tripId, "COMPLETE", "DISPATCHED", "COMPLETED");
+  return updatedTrip;
 }
 
-export async function cancelTrip(tripId: string) {
-  return prisma.$transaction(async (tx) => {
+export async function cancelTrip(tripId: string, reason?: string) {
+  let prev: any;
+  let updated: any;
+  await prisma.$transaction(async (tx) => {
     const trip = await tx.trip.findUnique({ where: { id: tripId } });
     if (!trip) throw new RuleViolation("Trip not found", 404);
     if (trip.status !== "DRAFT" && trip.status !== "DISPATCHED") {
@@ -182,11 +222,14 @@ export async function cancelTrip(tripId: string) {
       });
     }
 
-    return tx.trip.update({
+    prev = trip.status;
+    updated = await tx.trip.update({
       where: { id: tripId },
-      data: { status: TripStatus.CANCELLED },
+      data: { status: TripStatus.CANCELLED, cancelReason: reason || null },
     });
   });
+  await logAudit("TRIP", tripId, "CANCEL", prev, "CANCELLED", reason);
+  return updated;
 }
 
 export async function createMaintenanceLog(input: {
@@ -196,14 +239,15 @@ export async function createMaintenanceLog(input: {
   cost: number;
   date: Date;
 }) {
-  return prisma.$transaction(async (tx) => {
+  let log: any;
+  await prisma.$transaction(async (tx) => {
     const vehicle = await tx.vehicle.findUnique({ where: { id: input.vehicleId } });
     if (!vehicle) throw new RuleViolation("Vehicle not found", 404);
     if (vehicle.status === "ON_TRIP") {
       throw new RuleViolation("Cannot create maintenance for a vehicle that is On Trip");
     }
 
-    const log = await tx.maintenanceLog.create({
+    log = await tx.maintenanceLog.create({
       data: {
         vehicleId: input.vehicleId,
         serviceType: input.serviceType,
@@ -223,10 +267,13 @@ export async function createMaintenanceLog(input: {
 
     return log;
   });
+  await logAudit("MAINTENANCE", log.id, "CREATE", null, "ACTIVE", input.serviceType);
+  return log;
 }
 
 export async function closeMaintenanceLog(logId: string) {
-  return prisma.$transaction(async (tx) => {
+  let updated: any;
+  await prisma.$transaction(async (tx) => {
     const log = await tx.maintenanceLog.findUnique({
       include: { vehicle: true },
       where: { id: logId },
@@ -236,7 +283,7 @@ export async function closeMaintenanceLog(logId: string) {
       throw new RuleViolation("Maintenance log is already completed");
     }
 
-    const updated = await tx.maintenanceLog.update({
+    updated = await tx.maintenanceLog.update({
       where: { id: logId },
       data: { status: MaintenanceStatus.COMPLETED },
     });
@@ -254,6 +301,8 @@ export async function closeMaintenanceLog(logId: string) {
 
     return updated;
   });
+  await logAudit("MAINTENANCE", logId, "CLOSE", "ACTIVE", "COMPLETED");
+  return updated;
 }
 
 export type { Prisma };

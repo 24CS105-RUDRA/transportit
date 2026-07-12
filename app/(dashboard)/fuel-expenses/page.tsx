@@ -6,6 +6,7 @@ import { Modal } from "@/components/Modal";
 import { FormField, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "@/components/FormField";
 import { StatusBadge } from "@/components/Badge";
 import { Toast } from "@/components/Toast";
+import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/lib/useToast";
 import { formatCurrency } from "@/lib/format";
 
@@ -175,7 +176,7 @@ export default function FuelExpensesPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <TableSkeleton rows={6} cols={6} />
       ) : tab === "fuel" ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

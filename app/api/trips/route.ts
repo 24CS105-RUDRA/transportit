@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
-import { createTrip } from "@/lib/rules";
+import { createTrip, setAuditActor } from "@/lib/rules";
 
 const tripCreateSchema = z.object({
   source: z.string().min(1),
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = withAuth(request, ["DISPATCHER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const body = await request.json();

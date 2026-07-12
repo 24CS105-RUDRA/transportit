@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
-import { closeMaintenanceLog } from "@/lib/rules";
+import { closeMaintenanceLog, setAuditActor } from "@/lib/rules";
 
 export async function POST(
   request: NextRequest,
@@ -8,6 +8,7 @@ export async function POST(
 ) {
   const session = withAuth(request, ["FLEET_MANAGER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const { id } = await ctx.params;

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, KpiCard } from "@/components/Card";
+import { KpiSkeletonGrid } from "@/components/Skeleton";
 import { inputClass } from "@/components/FormField";
 
 type Stats = {
@@ -155,9 +156,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      {loading && (
-        <p className="text-sm text-zinc-500">Loading live metrics…</p>
-      )}
+      {loading && <KpiSkeletonGrid count={8} />}
       {error && (
         <p className="text-sm text-rose-600">Error: {error}</p>
       )}

@@ -9,6 +9,8 @@ export const MODULES = {
   fuelExpenses: "fuelExpenses",
   analytics: "analytics",
   settings: "settings",
+  safety: "safety",
+  audit: "audit",
 } as const;
 
 export type ModuleKey = (typeof MODULES)[keyof typeof MODULES];
@@ -20,9 +22,10 @@ export const ROLE_MODULE_ACCESS: Record<UserRole, ModuleKey[]> = {
     "maintenance",
     "analytics",
     "settings",
+    "audit",
   ],
-  DISPATCHER: ["dashboard", "trips"],
-  SAFETY_OFFICER: ["dashboard", "drivers"],
+  DISPATCHER: ["dashboard", "trips", "audit"],
+  SAFETY_OFFICER: ["dashboard", "drivers", "safety"],
   FINANCIAL_ANALYST: ["dashboard", "fuelExpenses", "analytics"],
 };
 
@@ -39,6 +42,8 @@ export const ROUTE_MODULE_MAP: { prefix: string; module: ModuleKey }[] = [
   { prefix: "/fuel-expenses", module: "fuelExpenses" },
   { prefix: "/analytics", module: "analytics" },
   { prefix: "/settings", module: "settings" },
+  { prefix: "/safety", module: "safety" },
+  { prefix: "/audit", module: "audit" },
 ];
 
 export function moduleForPath(pathname: string): ModuleKey | null {

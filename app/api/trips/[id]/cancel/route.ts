@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
-import { cancelTrip } from "@/lib/rules";
+import { cancelTrip, setAuditActor } from "@/lib/rules";
 
 export async function POST(
   request: NextRequest,
@@ -8,10 +8,14 @@ export async function POST(
 ) {
   const session = withAuth(request, ["DISPATCHER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const { id } = await ctx.params;
-    const trip = await cancelTrip(id);
+    const body = request.method === "POST" && request.headers.get("content-type")?.includes("application/json")
+      ? await request.json().catch(() => ({}))
+      : {};
+    const trip = await cancelTrip(id, body?.reason);
     return NextResponse.json({ trip });
   } catch (error) {
     return handleApiError(error);

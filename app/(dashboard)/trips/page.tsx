@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card } from "@/components/Card";
 import { Modal } from "@/components/Modal";
 import { FormField, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "@/components/FormField";
 import { StatusBadge } from "@/components/Badge";
 import { Toast } from "@/components/Toast";
+import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/lib/useToast";
 
 type Vehicle = { id: string; registrationNumber: string; nameModel: string; status: string };
@@ -19,6 +20,7 @@ type Trip = {
   plannedDistanceKm: number;
   status: string;
   revenue: number | null;
+  cancelReason?: string | null;
   vehicle?: Vehicle | null;
   driver?: Driver | null;
 };
@@ -33,6 +35,44 @@ export default function TripsPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [completeTrip, setCompleteTrip] = useState<Trip | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Trip | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [sortKey, setSortKey] = useState<string>("tripCode");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+
+  const sortedTrips = useMemo(() => {
+    const arr = [...trips];
+    arr.sort((a, b) => {
+      let av: any = (a as any)[sortKey];
+      let bv: any = (b as any)[sortKey];
+      if (sortKey === "vehicle") av = a.vehicle?.registrationNumber ?? "";
+      if (sortKey === "driver") av = a.driver?.name ?? "";
+      if (sortKey === "vehicle") bv = b.vehicle?.registrationNumber ?? "";
+      if (sortKey === "driver") bv = b.driver?.name ?? "";
+      if (typeof av === "string" && typeof bv === "string") {
+        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      av = av ?? 0;
+      bv = bv ?? 0;
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }, [trips, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedTrips.length / pageSize));
+  const pageTrips = sortedTrips.slice((page - 1) * pageSize, page * pageSize);
+
+  function toggleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
 
   const [form, setForm] = useState({
     source: "",
@@ -144,10 +184,12 @@ export default function TripsPage() {
     load();
   }
 
-  async function cancel(id: string) {
+  async function cancel(id: string, reason?: string) {
     const res = await fetch(`/api/trips/${id}/cancel`, {
       method: "POST",
       credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason ?? "" }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -156,6 +198,18 @@ export default function TripsPage() {
     }
     showToast(`Trip ${data.trip.tripCode} cancelled`);
     load();
+  }
+
+  function openCancel(t: Trip) {
+    setCancelReason("");
+    setCancelTarget(t);
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget) return;
+    await cancel(cancelTarget.id, cancelReason.trim());
+    setCancelTarget(null);
+    setCancelReason("");
   }
 
   async function complete(id: string) {
@@ -209,24 +263,36 @@ export default function TripsPage() {
       <Card>
         <h2 className="mb-4 text-xl font-semibold text-zinc-900">All Trips</h2>
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <TableSkeleton rows={6} cols={8} />
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 text-left text-zinc-500">
-                  <th className="py-2 pr-4">Code</th>
-                  <th className="py-2 pr-4">Route</th>
-                  <th className="py-2 pr-4">Vehicle</th>
-                  <th className="py-2 pr-4">Driver</th>
-                  <th className="py-2 pr-4">Cargo (kg)</th>
-                  <th className="py-2 pr-4">Distance (km)</th>
-                  <th className="py-2 pr-4">Status</th>
+                  {[
+                    ["tripCode", "Code"],
+                    ["source", "Route"],
+                    ["vehicle", "Vehicle"],
+                    ["driver", "Driver"],
+                    ["cargoWeightKg", "Cargo (kg)"],
+                    ["plannedDistanceKm", "Distance (km)"],
+                    ["status", "Status"],
+                  ].map(([key, label]) => (
+                    <th
+                      key={key}
+                      onClick={() => toggleSort(key as string)}
+                      className="cursor-pointer select-none py-2 pr-4 hover:text-zinc-900"
+                    >
+                      {label}
+                      {sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                    </th>
+                  ))}
                   <th className="py-2 pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {trips.map((t) => (
+                {pageTrips.map((t) => (
                   <tr key={t.id} className="border-b border-zinc-100">
                     <td className="py-2 pr-4 font-medium text-zinc-900">{t.tripCode}</td>
                     <td className="py-2 pr-4 text-zinc-600">
@@ -252,7 +318,7 @@ export default function TripsPage() {
                               Dispatch
                             </button>
                             <button
-                              onClick={() => cancel(t.id)}
+                              onClick={() => openCancel(t)}
                               className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
                             >
                               Cancel
@@ -268,7 +334,7 @@ export default function TripsPage() {
                               Complete
                             </button>
                             <button
-                              onClick={() => cancel(t.id)}
+                              onClick={() => openCancel(t)}
                               className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
                             >
                               Cancel
@@ -277,6 +343,14 @@ export default function TripsPage() {
                         )}
                         {t.status === "COMPLETED" && (
                           <span className="text-xs text-zinc-500">Done</span>
+                        )}
+                        {t.status === "CANCELLED" && (
+                          <span
+                            className="text-xs text-rose-500"
+                            title={t.cancelReason ?? ""}
+                          >
+                            {t.cancelReason ? `Cancelled: ${t.cancelReason}` : "Cancelled"}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -292,6 +366,30 @@ export default function TripsPage() {
               </tbody>
             </table>
           </div>
+          {sortedTrips.length > pageSize && (
+            <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+              <span>
+                Page {page} of {totalPages} · {sortedTrips.length} trips
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
         )}
       </Card>
 
@@ -370,6 +468,30 @@ export default function TripsPage() {
           </button>
           <button onClick={() => completeTrip && complete(completeTrip.id)} className={buttonPrimaryClass}>
             Complete
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={`Cancel Trip ${cancelTarget?.tripCode ?? ""}`}
+      >
+        <FormField label="Reason (optional)">
+          <textarea
+            className={inputClass}
+            rows={3}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="e.g. vehicle breakdown, no driver available"
+          />
+        </FormField>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={() => setCancelTarget(null)} className={buttonSecondaryClass}>
+            Close
+          </button>
+          <button onClick={confirmCancel} className="rounded bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">
+            Confirm Cancel
           </button>
         </div>
       </Modal>

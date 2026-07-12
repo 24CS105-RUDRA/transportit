@@ -11,8 +11,10 @@ const NAV_ITEMS: { module: ModuleKey; href: string; label: string }[] = [
   { module: "drivers", href: "/drivers", label: "Drivers" },
   { module: "trips", href: "/trips", label: "Trip Dispatcher" },
   { module: "maintenance", href: "/maintenance", label: "Maintenance" },
+  { module: "audit", href: "/audit", label: "Audit Log" },
   { module: "fuelExpenses", href: "/fuel-expenses", label: "Fuel & Expenses" },
   { module: "analytics", href: "/analytics", label: "Reports & Analytics" },
+  { module: "safety", href: "/safety", label: "Safety" },
   { module: "settings", href: "/settings", label: "Settings" },
 ];
 

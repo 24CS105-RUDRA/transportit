@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
-import { createMaintenanceLog } from "@/lib/rules";
+import { createMaintenanceLog, setAuditActor } from "@/lib/rules";
 
 const maintenanceSchema = z.object({
   vehicleId: z.string().min(1),
@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = withAuth(request, ["FLEET_MANAGER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const body = await request.json();

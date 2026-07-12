@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card, KpiCard } from "@/components/Card";
+import { KpiSkeletonGrid, TableSkeleton } from "@/components/Skeleton";
 import { formatCurrency } from "@/lib/format";
 
 type Analytics = {
@@ -29,9 +30,15 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   useEffect(() => {
-    fetch("/api/analytics", { credentials: "include" })
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    const qs = params.toString();
+    fetch(`/api/analytics${qs ? `?${qs}` : ""}`, { credentials: "include" })
       .then(async (res) => {
         if (res.status === 401) {
           window.location.href = "/login";
@@ -42,7 +49,7 @@ export default function AnalyticsPage() {
       .then((d) => d && setData(d))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [from, to]);
 
   function downloadCsv() {
     if (!data) return;
@@ -66,7 +73,15 @@ export default function AnalyticsPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) return <p className="text-sm text-zinc-500">Loading analytics…</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <KpiSkeletonGrid count={4} />
+        <TableSkeleton rows={6} cols={5} />
+        <TableSkeleton rows={6} cols={5} />
+      </div>
+    );
+  }
   if (error) return <p className="text-sm text-rose-600">Error: {error}</p>;
   if (!data) return <p className="text-sm text-zinc-500">No data.</p>;
 
@@ -93,7 +108,50 @@ export default function AnalyticsPage() {
         >
           Export CSV
         </button>
+        <button
+          onClick={() => window.print()}
+          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Print / PDF
+        </button>
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">From</label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">To</label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
+            />
+          </div>
+          {(from || to) && (
+            <button
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50"
+            >
+              Clear
+            </button>
+          )}
+          <span className="text-xs text-zinc-400">
+            Filters fuel, maintenance & revenue by date
+          </span>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Fleet Fuel Efficiency" value={`${data.fleetFuelEfficiency} km/L`} />

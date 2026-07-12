@@ -55,6 +55,7 @@ model Vehicle {
   trips              Trip[]
   maintenanceLogs    MaintenanceLog[]
   fuelLogs           FuelLog[]
+  documents          VehicleDocument[]
   expenses           Expense[]
 }
 
@@ -107,6 +108,7 @@ model Trip {
   status               TripStatus @default(DRAFT)
   dispatchedAt         DateTime?
   completedAt          DateTime?
+  cancelReason         String?
   finalOdometerKm      Float?
   fuelConsumedL        Float?
   createdAt            DateTime   @default(now())
@@ -169,4 +171,27 @@ model Settings {
   distanceUnit    String   @default("km")
   rolePermissions String   @default("{}")
   updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  action      String
+  fromStatus  String?
+  toStatus    String?
+  note        String?
+  actorEmail  String?
+  createdAt   DateTime @default(now())
+}
+
+model VehicleDocument {
+  id          String   @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  name        String
+  type        String
+  url         String?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
 }

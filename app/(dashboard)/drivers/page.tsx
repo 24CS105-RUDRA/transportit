@@ -40,6 +40,10 @@ export default function DriversPage() {
   const [editing, setEditing] = useState<Driver | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
 
   const params = useMemo(() => {
     const p = new URLSearchParams();
@@ -124,6 +128,33 @@ export default function DriversPage() {
 
   const drivers = data?.drivers ?? [];
 
+  const sortedDrivers = useMemo(() => {
+    const arr = [...drivers];
+    arr.sort((a, b) => {
+      let av: any = (a as any)[sortKey];
+      let bv: any = (b as any)[sortKey];
+      if (typeof av === "string" && typeof bv === "string") {
+        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      av = av ?? 0;
+      bv = bv ?? 0;
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }, [drivers, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedDrivers.length / pageSize));
+  const pageDrivers = sortedDrivers.slice((page - 1) * pageSize, page * pageSize);
+
+  function toggleSort(key: string) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -158,13 +189,26 @@ export default function DriversPage() {
       <Table>
         <Thead
           columns={["Driver", "License No.", "Category", "Expiry", "Contact", "Safety Score", "Status", ""]}
+          sort={{
+            keys: {
+              Driver: "name",
+              "License No.": "licenseNumber",
+              Category: "licenseCategory",
+              Expiry: "licenseExpiryDate",
+              "Safety Score": "safetyScore",
+              Status: "status",
+            },
+            active: sortKey,
+            dir: sortDir,
+            onSort: toggleSort,
+          }}
         />
         <tbody className="divide-y divide-zinc-100">
           {isLoading && <LoadingRow colSpan={8} />}
-          {!isLoading && drivers.length === 0 && (
+          {!isLoading && sortedDrivers.length === 0 && (
             <EmptyRow colSpan={8} message="No drivers found." />
           )}
-          {drivers.map((d) => {
+          {pageDrivers.map((d) => {
             const expired = isBefore(new Date(d.licenseExpiryDate), new Date());
             return (
               <tr key={d.id}>
@@ -203,6 +247,30 @@ export default function DriversPage() {
           })}
         </tbody>
       </Table>
+
+      {sortedDrivers.length > pageSize && (
+        <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+          <span>
+            Page {page} of {totalPages} · {sortedDrivers.length} drivers
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <Modal open={modalOpen} onClose={closeModal} title={editing ? "Edit Driver" : "Add Driver"}>
         <form

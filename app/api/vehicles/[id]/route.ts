@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
+import { logAudit, setAuditActor } from "@/lib/rules";
 
 const vehicleUpdateSchema = z.object({
   registrationNumber: z.string().min(1).optional(),
@@ -17,12 +18,17 @@ const vehicleUpdateSchema = z.object({
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/vehicles/[id]">) {
   const session = withAuth(request, ["FLEET_MANAGER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const { id } = await ctx.params;
     const body = await request.json();
     const data = vehicleUpdateSchema.parse(body);
+    const before = await prisma.vehicle.findUnique({ where: { id }, select: { status: true } });
     const vehicle = await prisma.vehicle.update({ where: { id }, data });
+    if (data.status && before && before.status !== data.status) {
+      await logAudit("VEHICLE", id, "STATUS_CHANGE", before.status, data.status);
+    }
     return NextResponse.json({ vehicle });
   } catch (error) {
     if (error instanceof z.ZodError) {

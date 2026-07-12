@@ -6,6 +6,18 @@ export async function GET(request: NextRequest) {
   const session = withAuth(request, null);
   if (isResponse(session)) return session;
 
+  const { searchParams } = new URL(request.url);
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  const dateFilter: { gte?: Date; lte?: Date } = {};
+  if (from) dateFilter.gte = new Date(from);
+  if (to) {
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    dateFilter.lte = end;
+  }
+  const hasRange = from || to;
+
   const [
     vehicles,
     fuelLogs,
@@ -14,9 +26,21 @@ export async function GET(request: NextRequest) {
     tripCount,
   ] = await Promise.all([
     prisma.vehicle.findMany(),
-    prisma.fuelLog.findMany(),
-    prisma.maintenanceLog.findMany({ where: { status: "ACTIVE" } }),
-    prisma.trip.findMany({ where: { status: "COMPLETED" } }),
+    prisma.fuelLog.findMany({
+      where: hasRange ? { date: dateFilter } : undefined,
+    }),
+    prisma.maintenanceLog.findMany({
+      where: {
+        status: "ACTIVE",
+        ...(hasRange ? { date: dateFilter } : {}),
+      },
+    }),
+    prisma.trip.findMany({
+      where: {
+        status: "COMPLETED",
+        ...(hasRange ? { completedAt: dateFilter } : {}),
+      },
+    }),
     prisma.trip.count(),
   ]);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, Thead, EmptyRow, LoadingRow } from "@/components/Table";
 import { StatusBadge } from "@/components/Badge";
@@ -43,6 +44,10 @@ export default function FleetPage() {
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string>("registrationNumber");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
 
   const params = useMemo(() => {
     const p = new URLSearchParams();
@@ -130,6 +135,33 @@ export default function FleetPage() {
 
   const vehicles = data?.vehicles ?? [];
 
+  const sortedVehicles = useMemo(() => {
+    const arr = [...vehicles];
+    arr.sort((a, b) => {
+      let av: any = (a as any)[sortKey];
+      let bv: any = (b as any)[sortKey];
+      if (typeof av === "string" && typeof bv === "string") {
+        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      av = av ?? 0;
+      bv = bv ?? 0;
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }, [vehicles, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedVehicles.length / pageSize));
+  const pageVehicles = sortedVehicles.slice((page - 1) * pageSize, page * pageSize);
+
+  function toggleSort(key: string) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -172,15 +204,33 @@ export default function FleetPage() {
       <Table>
         <Thead
           columns={["Reg. No.", "Name/Model", "Type", "Capacity", "Odometer", "Acq. Cost", "Status", ""]}
+          sort={{
+            keys: {
+              "Reg. No.": "registrationNumber",
+              "Name/Model": "nameModel",
+              Type: "type",
+              Capacity: "maxLoadCapacityKg",
+              Odometer: "odometerKm",
+              "Acq. Cost": "acquisitionCost",
+              Status: "status",
+            },
+            active: sortKey,
+            dir: sortDir,
+            onSort: toggleSort,
+          }}
         />
         <tbody className="divide-y divide-zinc-100">
           {isLoading && <LoadingRow colSpan={8} />}
-          {!isLoading && vehicles.length === 0 && (
+          {!isLoading && sortedVehicles.length === 0 && (
             <EmptyRow colSpan={8} message="No vehicles found." />
           )}
-          {vehicles.map((v) => (
+          {pageVehicles.map((v) => (
             <tr key={v.id}>
-              <td className="px-4 py-3 font-medium text-zinc-900">{v.registrationNumber}</td>
+              <td className="px-4 py-3 font-medium text-zinc-900">
+                <Link href={`/fleet/${v.id}`} className="hover:text-blue-600 hover:underline">
+                  {v.registrationNumber}
+                </Link>
+              </td>
               <td className="px-4 py-3">{v.nameModel}</td>
               <td className="px-4 py-3">{v.type}</td>
               <td className="px-4 py-3">{v.maxLoadCapacityKg} kg</td>
@@ -211,6 +261,30 @@ export default function FleetPage() {
           ))}
         </tbody>
       </Table>
+
+      {sortedVehicles.length > pageSize && (
+        <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+          <span>
+            Page {page} of {totalPages} · {sortedVehicles.length} vehicles
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <Modal open={modalOpen} onClose={closeModal} title={editing ? "Edit Vehicle" : "Add Vehicle"}>
         <form

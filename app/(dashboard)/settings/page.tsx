@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/Card";
 import { FormField, inputClass, buttonPrimaryClass } from "@/components/FormField";
+import { CardSkeleton } from "@/components/Skeleton";
 
 type Settings = {
   id: string;
@@ -112,7 +113,12 @@ export default function SettingsPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       ) : !settings ? (
         <p className="text-sm text-zinc-500">No settings found.</p>
       ) : (

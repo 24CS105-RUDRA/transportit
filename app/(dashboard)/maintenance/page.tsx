@@ -6,6 +6,7 @@ import { Modal } from "@/components/Modal";
 import { FormField, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "@/components/FormField";
 import { StatusBadge } from "@/components/Badge";
 import { Toast } from "@/components/Toast";
+import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/lib/useToast";
 import { formatCurrency } from "@/lib/format";
 
@@ -143,7 +144,7 @@ export default function MaintenancePage() {
       <Card>
         <h2 className="mb-4 text-xl font-semibold text-zinc-900">Service History</h2>
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <TableSkeleton rows={5} cols={6} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

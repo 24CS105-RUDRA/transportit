@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth, isResponse, handleApiError } from "@/lib/api-guard";
-import { completeTrip } from "@/lib/rules";
+import { completeTrip, setAuditActor } from "@/lib/rules";
 
 const completeSchema = z.object({
   finalOdometerKm: z.number().min(0),
@@ -16,6 +16,7 @@ export async function POST(
 ) {
   const session = withAuth(request, ["DISPATCHER"]);
   if (isResponse(session)) return session;
+  setAuditActor(session.email);
 
   try {
     const { id } = await ctx.params;

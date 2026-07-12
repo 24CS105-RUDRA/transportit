@@ -6,18 +6,38 @@ export function Table({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Thead({ columns }: { columns: string[] }) {
+export function Thead({
+  columns,
+  sort,
+}: {
+  columns: string[];
+  sort?: {
+    keys: Record<string, string>;
+    active: string;
+    dir: "asc" | "desc";
+    onSort: (key: string) => void;
+  };
+}) {
   return (
-    <thead className="bg-zinc-50">
+    <thead className="bg-zinc-50 dark:bg-zinc-900">
       <tr>
-        {columns.map((c) => (
-          <th
-            key={c}
-            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500"
-          >
-            {c}
-          </th>
-        ))}
+        {columns.map((c) => {
+          const key = sort?.keys[c];
+          const sortable = sort && key;
+          const isActive = sort && key === sort.active;
+          return (
+            <th
+              key={c}
+              onClick={sortable ? () => sort.onSort(key) : undefined}
+              className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 ${
+                sortable ? "cursor-pointer select-none hover:text-zinc-900" : ""
+              }`}
+            >
+              {c}
+              {isActive ? (sort!.dir === "asc" ? " ▲" : " ▼") : ""}
+            </th>
+          );
+        })}
       </tr>
     </thead>
   );
