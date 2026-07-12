@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = withAuth(request, ["FLEET_MANAGER"]);
+  const session = withAuth(request, ["SUPER_ADMIN", "FLEET_MANAGER"]);
   if (isResponse(session)) return session;
 
   try {

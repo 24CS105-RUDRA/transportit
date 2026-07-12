@@ -75,7 +75,13 @@ export default function SettingsPage() {
           });
           try {
             const parsed = JSON.parse(sData.settings.rolePermissions);
-            setAccess((prev) => ({ ...prev, ...parsed }));
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              const fixed: Record<string, string[]> = {};
+              for (const [k, v] of Object.entries(parsed)) {
+                fixed[k] = Array.isArray(v) ? v : typeof v === "string" ? [v] : [];
+              }
+              setAccess((prev) => ({ ...prev, ...fixed }));
+            }
           } catch {}
         }
       })
@@ -190,7 +196,8 @@ export default function SettingsPage() {
                     <tr key={mod} className="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
                       <td className="py-2.5 pr-4 font-medium text-zinc-900">{MODULE_LABELS[mod]}</td>
                       {ROLES.map((r) => {
-                        const hasAccess = access[r]?.includes(mod) ?? false;
+                        const roleAccess = access[r];
+                        const hasAccess = Array.isArray(roleAccess) && roleAccess.includes(mod);
                         return (
                           <td key={r} className="py-2.5 px-3 text-center">
                             <button
