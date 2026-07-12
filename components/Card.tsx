@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Card({
   children,
   className = "",
@@ -32,9 +34,9 @@ export function KpiCard({
   );
   if (href) {
     return (
-      <a href={href} className="hover-lift block cursor-pointer transition-opacity hover:opacity-80">
+      <Link href={href} className="hover-lift block cursor-pointer transition-opacity hover:opacity-80">
         <Card>{content}</Card>
-      </a>
+      </Link>
     );
   }
   return <Card>{content}</Card>;

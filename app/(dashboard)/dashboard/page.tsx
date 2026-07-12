@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, KpiCard } from "@/components/Card";
 import { KpiSkeletonGrid } from "@/components/Skeleton";
@@ -67,12 +67,30 @@ function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [stats, setStats] = useState<Stats | null>(null);
   const [regions, setRegions] = useState<string[]>([]);
   const [filters, setFilters] = useState({ type: "", status: "", region: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
+
+  useEffect(() => {
+    setFilters({
+      type: searchParams.get("type") ?? "",
+      status: searchParams.get("status") ?? "",
+      region: searchParams.get("region") ?? "",
+    });
+  }, [searchParams]);
+
+  function updateFilters(next: { type: string; status: string; region: string }) {
+    const params = new URLSearchParams();
+    if (next.type) params.set("type", next.type);
+    if (next.status) params.set("status", next.status);
+    if (next.region) params.set("region", next.region);
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+  }
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -135,7 +153,7 @@ export default function DashboardPage() {
             <select
               className={inputClass}
               value={filters.type}
-              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+              onChange={(e) => updateFilters({ ...filters, type: e.target.value })}
             >
               <option value="">All</option>
               {VEHICLE_TYPES.map((t) => (
@@ -150,7 +168,7 @@ export default function DashboardPage() {
             <select
               className={inputClass}
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              onChange={(e) => updateFilters({ ...filters, status: e.target.value })}
             >
               <option value="">All</option>
               {VEHICLE_STATUSES.map((s) => (
@@ -165,7 +183,7 @@ export default function DashboardPage() {
             <select
               className={inputClass}
               value={filters.region}
-              onChange={(e) => setFilters({ ...filters, region: e.target.value })}
+              onChange={(e) => updateFilters({ ...filters, region: e.target.value })}
             >
               <option value="">All</option>
               {regions.map((r) => (
@@ -176,7 +194,8 @@ export default function DashboardPage() {
             </select>
           </div>
           <button
-            onClick={() => setFilters({ type: "", status: "", region: "" })}
+            type="button"
+            onClick={() => updateFilters({ type: "", status: "", region: "" })}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Clear Filters
