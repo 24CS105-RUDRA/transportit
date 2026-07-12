@@ -50,9 +50,10 @@ type MapInnerProps = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   trackPositions?: PositionPoint[];
+  locateVehicleId?: string | null;
 };
 
-function MapInner({ vehicles, selectedId, onSelect, trackPositions }: MapInnerProps) {
+function MapInner({ vehicles, selectedId, onSelect, trackPositions, locateVehicleId }: MapInnerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -163,6 +164,22 @@ function MapInner({ vehicles, selectedId, onSelect, trackPositions }: MapInnerPr
     drawTrack();
   }, [trackPositions]);
 
+  useEffect(() => {
+    if (!mapInstanceRef.current || !locateVehicleId) return;
+    const v = vehicles.find((veh) => veh.id === locateVehicleId);
+    if (v?.latitude != null && v?.longitude != null) {
+      mapInstanceRef.current.setView([v.latitude, v.longitude], 14, { animate: true });
+      markersRef.current.forEach((m) => {
+        if (m.getLatLng) {
+          const ll = m.getLatLng();
+          if (Math.abs(ll.lat - v.latitude!) < 0.0001 && Math.abs(ll.lng - v.longitude!) < 0.0001) {
+            m.openPopup();
+          }
+        }
+      });
+    }
+  }, [locateVehicleId, vehicles]);
+
   return <div ref={mapRef} className="h-full w-full rounded-lg" />;
 }
 
@@ -176,6 +193,7 @@ export function FleetMap({
   const [vehicles, setVehicles] = useState<VehiclePosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [locateId, setLocateId] = useState<string | null>(null);
 
   const fetchPositions = () => {
     fetch("/api/vehicles/positions", { credentials: "include" })
@@ -202,6 +220,16 @@ export function FleetMap({
     );
   }
 
+  function handleLocate(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value;
+    if (!id) {
+      setLocateId(null);
+      return;
+    }
+    setLocateId(null);
+    setTimeout(() => setLocateId(id), 50);
+  }
+
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between">
@@ -211,13 +239,29 @@ export function FleetMap({
             ({vehicles.length} vehicle{vehicles.length !== 1 ? "s" : ""})
           </span>
         </h2>
-        <div className="flex items-center gap-4 text-xs">
-          {Object.entries(STATUS_COLORS).map(([status, color]) => (
-            <span key={status} className="flex items-center gap-1">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-              {status.replace("_", " ")}
-            </span>
-          ))}
+        <div className="flex items-center gap-3">
+          <select
+            onChange={handleLocate}
+            defaultValue=""
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700"
+          >
+            <option value="" disabled>
+              📍 Locate Vehicle
+            </option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.registrationNumber} — {v.nameModel}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-4 text-xs">
+            {Object.entries(STATUS_COLORS).map(([status, color]) => (
+              <span key={status} className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                {status.replace("_", " ")}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
       <div className="h-[480px] w-full overflow-hidden rounded-lg border border-zinc-200">
@@ -225,10 +269,11 @@ export function FleetMap({
           vehicles={vehicles}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          locateVehicleId={locateId}
         />
       </div>
       <p className="mt-2 text-xs text-zinc-400">
-        Auto-refreshes every {refreshInterval / 1000}s · Click a vehicle label for details
+        Auto-refreshes every {refreshInterval / 1000}s · Use the dropdown to locate any vehicle
       </p>
     </Card>
   );
