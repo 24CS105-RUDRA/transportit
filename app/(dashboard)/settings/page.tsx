@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/Card";
 import { FormField, inputClass, buttonPrimaryClass } from "@/components/FormField";
 import { CardSkeleton } from "@/components/Skeleton";
@@ -43,10 +43,28 @@ const DEFAULT_ACCESS: Record<string, string[]> = {
   FINANCIAL_ANALYST: ["dashboard", "fuelExpenses", "analytics"],
 };
 
+function sanitizeAccess(raw: unknown): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
+  for (const [role, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (Array.isArray(val)) {
+      result[role] = val.filter((v) => typeof v === "string" && MODULES.includes(v));
+    } else if (typeof val === "string") {
+      result[role] = val.split(",").map((s) => s.trim()).filter((s) => MODULES.includes(s));
+    }
+  }
+  return result;
+}
+
+function getAccess(access: Record<string, string[]>, role: string, mod: string): boolean {
+  const arr = access[role];
+  return Array.isArray(arr) && arr.includes(mod);
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState({ depotName: "", currency: "", distanceUnit: "" });
-  const [access, setAccess] = useState<Record<string, string[]>>({ ...DEFAULT_ACCESS });
+  const [access, setAccess] = useState<Record<string, string[]>>(() => ({ ...DEFAULT_ACCESS }));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +79,7 @@ export default function SettingsPage() {
     ])
       .then(async ([settingsRes, meRes]) => {
         let sData = null;
-        if (settingsRes.status === 200) sData = await settingsRes.json();
+        if (settingsRes.ok) sData = await settingsRes.json();
         if (meRes && meRes.ok) {
           const me = await meRes.json();
           setUserRole(me.user?.role ?? "");
@@ -69,34 +87,34 @@ export default function SettingsPage() {
         if (sData?.settings) {
           setSettings(sData.settings);
           setForm({
-            depotName: sData.settings.depotName,
-            currency: sData.settings.currency,
-            distanceUnit: sData.settings.distanceUnit,
+            depotName: sData.settings.depotName ?? "",
+            currency: sData.settings.currency ?? "",
+            distanceUnit: sData.settings.distanceUnit ?? "km",
           });
           try {
-            const parsed = JSON.parse(sData.settings.rolePermissions);
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-              const fixed: Record<string, string[]> = {};
-              for (const [k, v] of Object.entries(parsed)) {
-                fixed[k] = Array.isArray(v) ? v : typeof v === "string" ? [v] : [];
-              }
+            const parsed = JSON.parse(sData.settings.rolePermissions ?? "{}");
+            const fixed = sanitizeAccess(parsed);
+            if (Object.keys(fixed).length > 0) {
               setAccess((prev) => ({ ...prev, ...fixed }));
             }
-          } catch {}
+          } catch {
+            // keep defaults
+          }
         }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  function toggleModule(role: string, mod: string) {
+  const toggleModule = useCallback((role: string, mod: string) => {
     if (!canEdit) return;
     setAccess((prev) => {
-      const current = prev[role] ?? [];
-      const next = current.includes(mod) ? current.filter((m) => m !== mod) : [...current, mod];
+      const current = Array.isArray(prev[role]) ? [...prev[role]] : [];
+      const idx = current.indexOf(mod);
+      const next = idx >= 0 ? current.filter((m) => m !== mod) : [...current, mod];
       return { ...prev, [role]: next };
     });
-  }
+  }, [canEdit]);
 
   async function save() {
     setError(null);
@@ -196,8 +214,7 @@ export default function SettingsPage() {
                     <tr key={mod} className="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
                       <td className="py-2.5 pr-4 font-medium text-zinc-900">{MODULE_LABELS[mod]}</td>
                       {ROLES.map((r) => {
-                        const roleAccess = access[r];
-                        const hasAccess = Array.isArray(roleAccess) && roleAccess.includes(mod);
+                        const hasAccess = getAccess(access, r, mod);
                         return (
                           <td key={r} className="py-2.5 px-3 text-center">
                             <button
