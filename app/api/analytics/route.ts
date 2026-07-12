@@ -74,13 +74,17 @@ export async function GET(request: NextRequest) {
     .map((v) => {
       const cost = costByVehicle.get(v.id) ?? 0;
       const revenue = revenueByVehicle.get(v.id) ?? 0;
+      const acquisitionCost = v.acquisitionCost ?? 0;
+      // ROI = (Revenue - (Maintenance + Fuel)) / Acquisition Cost
+      const roi =
+        acquisitionCost > 0 ? (revenue - cost) / acquisitionCost : 0;
       return {
         id: v.id,
         plate: v.registrationNumber,
         model: v.nameModel,
         revenue,
         cost,
-        roi: cost > 0 ? revenue / cost - 1 : 0,
+        roi,
       };
     })
     .sort((a, b) => b.roi - a.roi);
