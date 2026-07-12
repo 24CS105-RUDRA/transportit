@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import {
   BarChart,
   Bar,
@@ -56,6 +58,206 @@ export default function AnalyticsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [activePreset, setActivePreset] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function exportPdf() {
+    if (!data) return;
+    setExporting(true);
+    try {
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let y = 0;
+      
+      const margin = 40;
+      const contentWidth = pageWidth - margin * 2;
+      
+      // jsPDF core fonts don't support unicode currency symbols like ₹
+      const sanitize = (str: string) => str.replace(/₹/g, "Rs. ").replace(/€/g, "EUR ");
+
+      // 1. Header Band
+      pdf.setFillColor(24, 24, 27); // zinc-900
+      pdf.rect(0, 0, pageWidth, 80, 'F');
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(22);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text("Fleet Analytics Report", margin, 48);
+      
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(161, 161, 170); // zinc-400
+      const filterLabel = from || to ? `${from || "Start"} to ${to || "Now"}` : "All Time";
+      pdf.text(`Period: ${filterLabel}  |  Generated: ${new Date().toLocaleDateString("en-IN")}`, margin, 65);
+      
+      y = 110;
+
+      // 2. Executive Insights
+      const insights: string[] = [];
+      if (data.fleetUtilization < 50) insights.push(`• Fleet utilization is low (${data.fleetUtilization}%) — consider reassigning idle vehicles.`);
+      if (data.totalMaintenance > data.totalFuelCost * 0.5) insights.push(`• High maintenance costs relative to fuel spend — review vehicle age/condition.`);
+      if (data.fleetFuelEfficiency < 5) insights.push(`• Low fuel efficiency (${data.fleetFuelEfficiency} km/L) — check routes or vehicle health.`);
+      if (data.vehicleRoi.some(v => v.roi < 0)) insights.push(`• ${data.vehicleRoi.filter(v => v.roi < 0).length} vehicle(s) have negative ROI — review operational costs.`);
+      if (data.fleetUtilization >= 70 && data.fleetFuelEfficiency >= 8) insights.push(`• Optimal performance: ${data.fleetUtilization}% utilization with ${data.fleetFuelEfficiency} km/L efficiency.`);
+
+      if (insights.length > 0) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.setTextColor(24, 24, 27);
+        pdf.text("Executive Summary", margin, y);
+        y += 15;
+        
+        pdf.setFillColor(244, 244, 245); // zinc-100
+        pdf.setDrawColor(228, 228, 231); // zinc-200
+        pdf.rect(margin, y, contentWidth, insights.length * 20 + 20, 'FD');
+        
+        y += 20;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(11);
+        pdf.setTextColor(63, 63, 70); // zinc-700
+        insights.forEach(insight => {
+          pdf.text(insight, margin + 15, y);
+          y += 20;
+        });
+        y += 20;
+      }
+
+      // 3. KPI Grid
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.setTextColor(24, 24, 27);
+      pdf.text("Key Performance Indicators", margin, y);
+      y += 20;
+
+      const kpis = [
+        { label: "Fleet Fuel Efficiency", value: `${data.fleetFuelEfficiency} km/L` },
+        { label: "Operational Cost", value: formatCurrency(data.operationalCost) },
+        { label: "Total Revenue", value: formatCurrency(data.totalRevenue) },
+        { label: "Fleet Utilization", value: `${data.fleetUtilization}%` }
+      ];
+
+      const kpiWidth = (contentWidth - 15) / 2;
+      const kpiHeight = 60;
+      
+      kpis.forEach((kpi, i) => {
+        const row = Math.floor(i / 2);
+        const col = i % 2;
+        const x = margin + col * (kpiWidth + 15);
+        const kpiY = y + row * (kpiHeight + 15);
+        
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(228, 228, 231);
+        pdf.rect(x, kpiY, kpiWidth, kpiHeight, 'FD');
+        
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(113, 113, 122); // zinc-500
+        pdf.text(kpi.label, x + 15, kpiY + 22);
+        
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(16);
+        pdf.setTextColor(24, 24, 27);
+        pdf.text(sanitize(kpi.value), x + 15, kpiY + 45);
+      });
+      
+      y += (2 * (kpiHeight + 15)) + 15;
+
+      // 4. Capture Charts
+      const captureChart = async (id: string, title: string) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        if (y > pageHeight - 250) {
+          pdf.addPage();
+          y = 50;
+        }
+        
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.setTextColor(24, 24, 27);
+        pdf.text(title, margin, y);
+        y += 15;
+
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+        const imgData = canvas.toDataURL("image/png");
+        const imgProps = pdf.getImageProperties(imgData);
+        
+        const pdfWidth = contentWidth;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        if (y + pdfHeight > pageHeight - 50) {
+          pdf.addPage();
+          y = 50;
+        }
+
+        pdf.setDrawColor(228, 228, 231);
+        pdf.rect(margin, y, pdfWidth, pdfHeight, 'S');
+        pdf.addImage(imgData, "PNG", margin, y, pdfWidth, pdfHeight);
+        
+        y += pdfHeight + 35;
+      };
+
+      await captureChart("chart-costliest", "Top Costliest Vehicles");
+      await captureChart("chart-roi", "Vehicle ROI Analysis");
+      
+      // 5. Cost Breakdown
+      if (y > pageHeight - 150) {
+         pdf.addPage();
+         y = 50;
+      }
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.setTextColor(24, 24, 27);
+      pdf.text("Financial Breakdown", margin, y);
+      y += 20;
+      
+      pdf.setFillColor(250, 250, 250); // zinc-50
+      pdf.setDrawColor(228, 228, 231);
+      pdf.rect(margin, y, contentWidth, 30, 'FD');
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.setTextColor(82, 82, 91);
+      pdf.text("Category", margin + 15, y + 20);
+      pdf.text("Amount", margin + contentWidth - 120, y + 20);
+      
+      y += 30;
+      
+      const drawRow = (label: string, value: string) => {
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(margin, y, contentWidth, 30, 'FD');
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(39, 39, 42);
+        pdf.text(label, margin + 15, y + 20);
+        
+        pdf.setFont("helvetica", "bold");
+        pdf.text(sanitize(value), margin + contentWidth - 120, y + 20);
+        y += 30;
+      };
+      
+      drawRow("Total Fuel Cost", formatCurrency(data.totalFuelCost));
+      drawRow("Total Maintenance", formatCurrency(data.totalMaintenance));
+      drawRow("Operational Cost (Fuel + Maint.)", formatCurrency(data.operationalCost));
+      drawRow("Total Revenue", formatCurrency(data.totalRevenue));
+      
+      // Footer
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFont("helvetica", "italic");
+        pdf.setFontSize(9);
+        pdf.setTextColor(161, 161, 170);
+        pdf.text(`TransitOps Analytics • Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 30, { align: "center" });
+      }
+
+      pdf.save(`transitops-analytics-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function applyPreset(days: number, idx: number) {
     setActivePreset(idx);
@@ -152,19 +354,13 @@ export default function AnalyticsPage() {
             Export CSV
           </button>
           <button
-            onClick={() => window.print()}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            onClick={exportPdf}
+            disabled={exporting}
+            className={`rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 ${exporting ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            Print / PDF
+            {exporting ? "Generating PDF..." : "Export to PDF"}
           </button>
         </div>
-      </div>
-
-      {/* Print header — only shows when printing */}
-      <div className="hidden print-header">
-        <h1 className="text-2xl font-bold">TransitOps Analytics Report</h1>
-        <p className="text-sm text-zinc-600">Period: {filterLabel}</p>
-        <p className="text-xs text-zinc-400">Generated: {new Date().toLocaleDateString("en-IN")}</p>
       </div>
 
       <Card className="no-print">
@@ -257,7 +453,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-xl font-semibold text-zinc-900 mb-4">Top Costliest Vehicles</h2>
-          <div className="h-72">
+          <div id="chart-costliest" className="h-72 bg-white p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f1" />
@@ -276,7 +472,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <h2 className="text-xl font-semibold text-zinc-900 mb-4">Vehicle ROI (%)</h2>
-          <div className="h-72">
+          <div id="chart-roi" className="h-72 bg-white p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={roiData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f1" />

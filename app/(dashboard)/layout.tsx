@@ -16,7 +16,7 @@ export default async function DashboardLayout({
 
   return (
     <Providers>
-      <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-zinc-950">
         <Sidebar role={session.role} name={session.name} email={session.email} />
         <div className="flex flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900">

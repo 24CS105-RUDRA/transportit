@@ -62,7 +62,11 @@ export async function getDynamicModules(role: UserRole): Promise<ModuleKey[]> {
     if (!settings?.rolePermissions) return ROLE_MODULE_ACCESS[role] ?? [];
     const custom = parseRolePermissions(settings.rolePermissions);
     if (custom && custom[role]) {
-      return custom[role].filter((m): m is ModuleKey => (ALL_MODULES as string[]).includes(m));
+      const allowed = custom[role].filter((m): m is ModuleKey => (ALL_MODULES as string[]).includes(m));
+      if (!allowed.includes("dashboard")) {
+        allowed.push("dashboard");
+      }
+      return allowed;
     }
     return ROLE_MODULE_ACCESS[role] ?? [];
   } catch {
