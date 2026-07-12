@@ -18,7 +18,13 @@ const NAV_ITEMS: { module: ModuleKey; href: string; label: string }[] = [
   { module: "settings", href: "/settings", label: "Settings" },
 ];
 
+const ALL_MODULES: ModuleKey[] = [
+  "dashboard", "fleet", "drivers", "trips", "maintenance",
+  "audit", "fuelExpenses", "analytics", "safety", "settings",
+];
+
 const ROLE_MODULES: Record<UserRole, ModuleKey[]> = {
+  SUPER_ADMIN: ALL_MODULES,
   FLEET_MANAGER: ["dashboard", "fleet", "maintenance", "analytics", "settings", "audit"],
   DISPATCHER: ["dashboard", "trips", "audit"],
   SAFETY_OFFICER: ["dashboard", "drivers", "safety"],

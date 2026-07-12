@@ -15,7 +15,10 @@ export const MODULES = {
 
 export type ModuleKey = (typeof MODULES)[keyof typeof MODULES];
 
+const ALL_MODULES: ModuleKey[] = Object.values(MODULES);
+
 export const ROLE_MODULE_ACCESS: Record<UserRole, ModuleKey[]> = {
+  SUPER_ADMIN: ALL_MODULES,
   FLEET_MANAGER: [
     "dashboard",
     "fleet",

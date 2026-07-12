@@ -4,13 +4,14 @@ import { useState } from "react";
 import { inputClass, buttonPrimaryClass } from "@/components/FormField";
 
 const DEMO_ACCOUNTS = [
+  { label: "Super Admin", email: "admin@transitops.com" },
   { label: "Fleet Manager", email: "fleetmanager@transitops.com" },
   { label: "Dispatcher", email: "dispatcher@transitops.com" },
   { label: "Safety Officer", email: "safety@transitops.com" },
   { label: "Financial Analyst", email: "finance@transitops.com" },
 ];
 
-const ROLES = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
+const ROLES = ["Super Admin", "Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
 
 const FEATURES = ["Trip Planner", "Maintenance", "Safety Officer", "Financial Analyst"];
 

@@ -33,6 +33,13 @@ describe("canAccessModule", () => {
       expect(canAccessModule(role as never, "dashboard")).toBe(true);
     }
   });
+
+  it("super admin can access all modules", () => {
+    const allModules = ["dashboard", "fleet", "drivers", "trips", "maintenance", "fuelExpenses", "analytics", "settings", "safety", "audit"];
+    for (const mod of allModules) {
+      expect(canAccessModule("SUPER_ADMIN", mod as never)).toBe(true);
+    }
+  });
 });
 
 describe("moduleForPath", () => {

@@ -49,6 +49,7 @@ export default function FleetPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [showMap, setShowMap] = useState(true);
+  const [mapWasOpen, setMapWasOpen] = useState(true);
   const pageSize = 8;
 
   const params = useMemo(() => {
@@ -111,6 +112,8 @@ export default function FleetPage() {
     setEditing(null);
     setForm(emptyForm);
     setFormError(null);
+    setMapWasOpen(showMap);
+    setShowMap(false);
     setModalOpen(true);
   }
 
@@ -127,12 +130,15 @@ export default function FleetPage() {
       status: v.status,
     });
     setFormError(null);
+    setMapWasOpen(showMap);
+    setShowMap(false);
     setModalOpen(true);
   }
 
   function closeModal() {
     setModalOpen(false);
     setFormError(null);
+    setShowMap(mapWasOpen);
   }
 
   const vehicles = data?.vehicles ?? [];
