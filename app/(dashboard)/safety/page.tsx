@@ -49,6 +49,35 @@ export default function SafetyPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Auto-send reminders when page loads and there are expiring drivers
+  useEffect(() => {
+    if (loading || drivers.length === 0) return;
+    const expiring = drivers.filter((d) => {
+      const days = daysUntil(d.licenseExpiryDate);
+      return days <= 30;
+    });
+    if (expiring.length === 0) return;
+
+    const lastSent = localStorage.getItem("license-reminders-sent");
+    const today = new Date().toDateString();
+    if (lastSent === today) return;
+
+    setSending(true);
+    fetch("/api/safety/license-reminders", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.sent > 0) {
+          setSendResult(
+            `Auto: Sent ${data.sent} reminder email(s) for ${data.total} expiring/expired license(s)`
+          );
+          localStorage.setItem("license-reminders-sent", today);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSending(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, drivers]);
+
   if (loading) return <TableSkeleton rows={6} cols={5} />;
   if (error) return <p className="text-sm text-rose-600">Error: {error}</p>;
 
