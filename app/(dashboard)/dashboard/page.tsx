@@ -337,32 +337,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-3">
-                Quick Actions
-              </h2>
-              <div className="space-y-2">
-                <button
-                  onClick={() => router.push("/drivers")}
-                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
-                >
-                  + Manage Drivers
-                </button>
-                <button
-                  onClick={() => router.push("/fleet")}
-                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
-                >
-                  + Register Vehicle
-                </button>
-                <button
-                  onClick={() => router.push("/trips")}
-                  className="w-full text-left px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100 rounded transition-colors"
-                >
-                  + Create Trip
-                </button>
-              </div>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
             <Card>
               <h2 className="text-lg font-semibold text-zinc-900 mb-3">
